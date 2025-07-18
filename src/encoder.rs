@@ -3,10 +3,6 @@ use std::alloc::Layout;
 pub trait Encoder: Send + Sync {
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>);
 
-    unsafe fn encode(&self, erased: *const u8, out: &mut Vec<u8>) {
-        self.encode_many(std::ptr::slice_from_raw_parts(erased, 1), out);
-    }
-
     fn in_place(&self) -> bool {
         false
     }

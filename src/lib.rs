@@ -109,7 +109,7 @@ pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
 
 fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
     let encoder = encoder_cached(T::SHAPE);
-    unsafe { encoder.encode(t as *const T as *const u8, out) };
+    unsafe { encoder.encode_many(std::ptr::slice_from_raw_parts(t as *const T as *const u8, 1), out) };
 }
 
 #[cfg(test)]
