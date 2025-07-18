@@ -1,0 +1,15 @@
+[package]
+name = "lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "1.14", features = [ "min_const_generics", "must_cast" ] }
+facet-core = "0.27.16"
+
+[dev-dependencies]
+bitcode = { version = "0.6.6", features = [ "serde" ]}
+bincode = "1"
+facet-xdr = "0.1.19"
+facet = "0.27.16"
+serde = { version = "1", features = [ "derive" ]}
