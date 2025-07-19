@@ -13,3 +13,7 @@ bincode = "1"
 facet-xdr = "0.1.19"
 facet = "0.27.16"
 serde = { version = "1", features = [ "derive" ]}
+
+[features]
+std = []
+default = [ "std" ]

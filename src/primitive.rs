@@ -1,4 +1,5 @@
-use crate::encoder::Encoder;
+use crate::error::Result;
+use crate::{decoder::Decoder, encoder::Encoder};
 use bytemuck::NoUninit;
 use std::marker::PhantomData;
 
@@ -16,5 +17,14 @@ impl<T: NoUninit> Encoder for PrimitiveEncoder<T> {
 
     fn in_place(&self) -> bool {
         true // TODO only on little endian
+    }
+}
+
+#[derive(Default)]
+pub struct PrimitiveDecoder<T>(PhantomData<fn(T)>);
+
+impl<T: NoUninit> Decoder for PrimitiveDecoder<T> {
+    unsafe fn decode_many(&self, _input: &mut &[u8], _erased: *mut [u8]) -> Result<()> {
+        todo!()
     }
 }

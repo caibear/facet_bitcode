@@ -39,6 +39,7 @@ impl Encoder for SliceEncoder {
             out,
         );
 
+        // TODO if there's just one slice it can be used directly without copying.
         try_encode_in_place(
             &*self.elements,
             self.element_layout,
