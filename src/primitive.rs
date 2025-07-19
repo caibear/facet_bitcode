@@ -3,6 +3,8 @@ use crate::{decoder::Decoder, encoder::Encoder};
 use bytemuck::NoUninit;
 use std::marker::PhantomData;
 
+pub static _DUMMY_ENCODER: PrimitiveEncoder<u32> = PrimitiveEncoder(PhantomData);
+
 #[derive(Default)]
 pub struct PrimitiveEncoder<T>(PhantomData<fn(T)>);
 

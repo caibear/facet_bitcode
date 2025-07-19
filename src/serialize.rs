@@ -1,12 +1,12 @@
+use crate::cache::encoder_cached;
 use crate::encoder::Encoder;
 use crate::primitive::PrimitiveEncoder;
 use crate::slice::SliceEncoder;
 use crate::strided::{StridedEncoder, StructEncoder};
 use facet_core::{
-    ConstTypeId, Def, Facet, KnownPointer, NumericType, PointerDef, PointerType, PrimitiveType,
-    SequenceType, Shape, SliceType, TextualType, Type, UserType, ValuePointerType,
+    Def, Facet, KnownPointer, NumericType, PointerDef, PointerType, PrimitiveType, SequenceType,
+    Shape, SliceType, TextualType, Type, UserType, ValuePointerType,
 };
-use std::sync::RwLock;
 
 pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
     let mut out = vec![];
@@ -19,30 +19,8 @@ fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
     unsafe { encoder.encode_one(t as *const T as *const u8, out) };
 }
 
-// TODO once cache with Encoder + Option<Decoder>.
-// TODO replace with thread_local to avoid contention?
-static ENCODER_CACHE: RwLock<Vec<(ConstTypeId, &'static dyn Encoder)>> = RwLock::new(vec![]);
-
-fn encoder_cached(shape: &'static Shape) -> &'static dyn Encoder {
-    let read_cache = ENCODER_CACHE.read().unwrap();
-    // TODO use binary search.
-    if let Some((_, encoder)) = read_cache.iter().copied().find(|(id, _)| *id == shape.id) {
-        return encoder;
-    }
-    drop(read_cache);
-    let mut write_cache = ENCODER_CACHE.write().unwrap();
-    match write_cache.binary_search_by_key(&shape.id, |(id, _)| *id) {
-        Ok(i) => write_cache[i].1,
-        Err(i) => {
-            // TODO a Vec<T> encoder could share the T encoder if encoders contained static references.
-            let encoder = Box::leak(encoder(shape));
-            write_cache.insert(i, (shape.id, encoder));
-            encoder
-        }
-    }
-}
-
-fn encoder(shape: &'static Shape) -> Box<dyn Encoder> {
+// TODO move out of serialize.rs to output both Encoder and Option<Decoder>.
+pub fn encoder(shape: &'static Shape) -> Box<dyn Encoder> {
     match shape.ty {
         Type::Primitive(PrimitiveType::Numeric(NumericType::Integer { signed: false })) => {
             match shape.layout.sized_layout().unwrap().size() {

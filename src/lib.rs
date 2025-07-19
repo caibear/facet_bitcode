@@ -4,6 +4,7 @@ extern crate alloc;
 #[cfg(test)]
 extern crate test;
 
+mod cache;
 mod consume;
 mod decoder;
 mod deserialize;
