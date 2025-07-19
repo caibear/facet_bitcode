@@ -7,6 +7,12 @@ use std::marker::PhantomData;
 pub struct PrimitiveEncoder<T>(PhantomData<fn(T)>);
 
 impl<T: NoUninit> Encoder for PrimitiveEncoder<T> {
+    unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
+        let erased: &[u8] =
+            std::slice::from_raw_parts(erased as *const u8, std::mem::size_of::<T>());
+        out.extend_from_slice(erased); // TODO swap_bytes on big endian.
+    }
+
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
         let erased: &[u8] = std::slice::from_raw_parts(
             erased as *const u8,

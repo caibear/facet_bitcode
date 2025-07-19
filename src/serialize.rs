@@ -1,4 +1,4 @@
-use crate::encoder::{encode_one, Encoder};
+use crate::encoder::Encoder;
 use crate::primitive::PrimitiveEncoder;
 use crate::slice::SliceEncoder;
 use crate::strided::{StridedEncoder, StructEncoder};
@@ -16,7 +16,7 @@ pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
 
 fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
     let encoder = encoder_cached(T::SHAPE);
-    unsafe { encode_one(encoder, t as *const T as *const u8, out) };
+    unsafe { encoder.encode_one(t as *const T as *const u8, out) };
 }
 
 // TODO once cache with Encoder + Option<Decoder>.

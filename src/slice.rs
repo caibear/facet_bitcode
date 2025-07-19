@@ -1,4 +1,4 @@
-use crate::encoder::{encode_one, try_encode_in_place, Encoder};
+use crate::encoder::{encode_one_or_many, try_encode_in_place, Encoder};
 use crate::primitive::PrimitiveEncoder;
 use std::alloc::Layout;
 
@@ -21,17 +21,17 @@ impl SliceEncoder {
 }
 
 impl Encoder for SliceEncoder {
+    unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
+        let slice = unsafe { *(erased as *const *const [u8]) };
+        let len = slice.len() as LengthInt;
+        self.lengths
+            .encode_one((&len) as *const LengthInt as *const u8, out);
+        encode_one_or_many(&*self.elements, slice, out);
+    }
+
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
         let erased = erased as *const [*const [u8]];
         let n: usize = erased.len();
-        // Optimization: if there's only 1 slice we don't have to concatenate slices.
-        if n == 1 {
-            let slice = unsafe { *(erased as *const *const [u8]) };
-            let len = slice.len() as LengthInt;
-            encode_one(&self.lengths, (&len) as *const LengthInt as *const u8, out);
-            self.elements.encode_many(slice, out);
-            return;
-        }
 
         let slices = (0..n).map(|i| unsafe { *(erased as *const *const [u8]).add(i) });
         let mut n_elements = 0;
