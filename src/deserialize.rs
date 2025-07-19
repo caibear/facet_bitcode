@@ -1,10 +1,12 @@
 use std::mem::MaybeUninit;
 
 use crate::error::Error;
+use crate::primitive::PrimitiveDecoder;
 use crate::{consume::expect_eof, decoder::Decoder};
 use facet_core::{Facet, Shape};
 
 fn decoder(_shape: &'static Shape) -> Box<dyn Decoder> {
+    let _ = PrimitiveDecoder::<u32>::default(); // TODO
     todo!()
 }
 

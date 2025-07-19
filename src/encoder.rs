@@ -8,6 +8,11 @@ pub trait Encoder: Send + Sync {
     }
 }
 
+#[inline(always)]
+pub unsafe fn encode_one(encoder: &dyn Encoder, erased: *const u8, out: &mut Vec<u8>) {
+    unsafe { encoder.encode_many(std::ptr::slice_from_raw_parts(erased, 1), out) };
+}
+
 // Uses an FnMut instead of an FnOnce because the latter cannot be called from dyn easily.
 #[inline(never)]
 pub unsafe fn try_encode_in_place(

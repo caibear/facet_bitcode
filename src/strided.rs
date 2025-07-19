@@ -1,6 +1,6 @@
 use std::alloc::Layout;
 
-use crate::encoder::{try_encode_in_place, Encoder};
+use crate::encoder::{encode_one, try_encode_in_place, Encoder};
 
 pub struct StridedEncoder {
     layout: Layout,
@@ -24,6 +24,12 @@ impl Encoder for StridedEncoder {
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
         let erased = erased.byte_add(self.offset);
         let n = erased.len();
+        // Optimization: if there's only 1 item we don't have to compress strides.
+        if n == 1 {
+            encode_one(&*self.encoder, erased as *const u8, out);
+            return;
+        }
+
         let stride = self.stride;
         let copy_size = self.layout.size();
         let items = (0..n * stride)

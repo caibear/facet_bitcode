@@ -1,9 +1,11 @@
-use crate::encoder::{try_encode_in_place, Encoder};
+use crate::encoder::{encode_one, try_encode_in_place, Encoder};
 use crate::primitive::PrimitiveEncoder;
 use std::alloc::Layout;
 
+type LengthInt = u32; // TODO usize or u64.
+
 pub struct SliceEncoder {
-    lengths: PrimitiveEncoder<u32>,
+    lengths: PrimitiveEncoder<LengthInt>,
     element_layout: Layout,
     elements: Box<dyn Encoder>,
 }
@@ -21,25 +23,32 @@ impl SliceEncoder {
 impl Encoder for SliceEncoder {
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
         let erased = erased as *const [*const [u8]];
-        let n = erased.len();
-        let slices = (0..n).map(|i| unsafe { *(erased as *const *const [u8]).add(i) });
+        let n: usize = erased.len();
+        // Optimization: if there's only 1 slice we don't have to concatenate slices.
+        if n == 1 {
+            let slice = unsafe { *(erased as *const *const [u8]) };
+            let len = slice.len() as LengthInt;
+            encode_one(&self.lengths, (&len) as *const LengthInt as *const u8, out);
+            self.elements.encode_many(slice, out);
+            return;
+        }
 
+        let slices = (0..n).map(|i| unsafe { *(erased as *const *const [u8]).add(i) });
         let mut n_elements = 0;
         try_encode_in_place(
             &self.lengths,
-            Layout::for_value(&0u32),
+            Layout::for_value(&(0 as LengthInt)),
             n,
             &mut |mut dst| {
                 for slice in slices.clone() {
                     n_elements += slice.len();
-                    *(dst as *mut u32) = slice.len() as u32; // TODO usize.
-                    dst = dst.byte_add(std::mem::size_of::<u32>());
+                    *(dst as *mut LengthInt) = slice.len() as LengthInt;
+                    dst = dst.byte_add(std::mem::size_of::<LengthInt>());
                 }
             },
             out,
         );
 
-        // TODO if there's just one slice it can be used directly without copying.
         try_encode_in_place(
             &*self.elements,
             self.element_layout,

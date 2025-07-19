@@ -1,4 +1,4 @@
-use crate::encoder::Encoder;
+use crate::encoder::{encode_one, Encoder};
 use crate::primitive::PrimitiveEncoder;
 use crate::slice::SliceEncoder;
 use crate::strided::{StridedEncoder, StructEncoder};
@@ -16,12 +16,7 @@ pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
 
 fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
     let encoder = encoder_cached(T::SHAPE);
-    unsafe {
-        encoder.encode_many(
-            std::ptr::slice_from_raw_parts(t as *const T as *const u8, 1),
-            out,
-        )
-    };
+    unsafe { encode_one(encoder, t as *const T as *const u8, out) };
 }
 
 // TODO once cache with Encoder + Option<Decoder>.
@@ -276,6 +271,53 @@ mod tests {
         b.iter(|| black_box(facet_xdr::to_vec(black_box(&v)).unwrap()))
     }
 
+    macro_rules! bench {
+        ($($b:ident),+) => { $(paste::paste! {
+            #[bench]
+            fn [<bench_ $b _facet_bitcode>](b: &mut Bencher) {
+                let v = $b();
+                let mut out = vec![];
+                b.iter(|| {
+                    let out = black_box(&mut out);
+                    out.clear();
+                    black_box(serialize_into(out, black_box(&v)))
+                })
+            }
+
+            #[bench]
+            fn [<bench_ $b _serde_bitcode>](b: &mut Bencher) {
+                let v = $b();
+                b.iter(|| black_box(bitcode::serialize(black_box(&v))))
+            }
+
+            #[bench]
+            fn [<bench_ $b _derive_bitcode>](b: &mut Bencher) {
+                let v = $b();
+                let mut buffer = bitcode::Buffer::new();
+                b.iter(|| {
+                    black_box(black_box(&mut buffer).encode(black_box(v)));
+                })
+            }
+
+            #[bench]
+            fn [<bench_ $b _bincode>](b: &mut Bencher) {
+                let v = $b();
+                let mut out = vec![];
+                b.iter(|| {
+                    let out = black_box(&mut out);
+                    out.clear();
+                    black_box(bincode::serialize_into(out, black_box(&v)).unwrap())
+                })
+            }
+
+            #[bench]
+            fn [<bench_ $b _facet_xdr>](b: &mut Bencher) {
+                let v = $b();
+                b.iter(|| black_box(facet_xdr::to_vec(black_box(&v)).unwrap()))
+            }
+        })+};
+    }
+
     #[derive(Facet, Serialize, bitcode::Encode)]
     struct Vertex {
         x: f32,
@@ -286,9 +328,9 @@ mod tests {
         b: u8,
     }
 
-    fn mesh() -> &'static [Vertex] {
+    fn mesh(n: usize) -> &'static [Vertex] {
         Vec::leak(
-            (0..1000)
+            (0..n)
                 .map(|i| Vertex {
                     x: i as f32,
                     y: i as f32,
@@ -301,46 +343,12 @@ mod tests {
         )
     }
 
-    #[bench]
-    fn bench_mesh_facet_bitcode(b: &mut Bencher) {
-        let v = mesh();
-        let mut out = vec![];
-        b.iter(|| {
-            let out = black_box(&mut out);
-            out.clear();
-            black_box(serialize_into(out, black_box(&v)))
-        })
+    fn mesh_one() -> &'static [Vertex] {
+        mesh(1)
     }
 
-    #[bench]
-    fn bench_mesh_serde_bitcode(b: &mut Bencher) {
-        let v = mesh();
-        b.iter(|| black_box(bitcode::serialize(black_box(&v))))
+    fn mesh_1k() -> &'static [Vertex] {
+        mesh(1000)
     }
-
-    #[bench]
-    fn bench_mesh_derive_bitcode(b: &mut Bencher) {
-        let v = mesh();
-        let mut buffer = bitcode::Buffer::new();
-        b.iter(|| {
-            black_box(black_box(&mut buffer).encode(black_box(v)));
-        })
-    }
-
-    #[bench]
-    fn bench_mesh_bincode(b: &mut Bencher) {
-        let v = mesh();
-        let mut out = vec![];
-        b.iter(|| {
-            let out = black_box(&mut out);
-            out.clear();
-            black_box(bincode::serialize_into(out, black_box(&v)).unwrap())
-        })
-    }
-
-    #[bench]
-    fn bench_mesh_facet_xdr(b: &mut Bencher) {
-        let v = mesh();
-        b.iter(|| black_box(facet_xdr::to_vec(black_box(&v)).unwrap()))
-    }
+    bench!(mesh_one, mesh_1k);
 }
