@@ -24,8 +24,8 @@ pub fn deserialize<'facet, T: Facet<'facet>>(bytes: &[u8]) -> Result<T, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::codec::tests::*;
     use std::fmt::Debug;
-    use test::{black_box, Bencher};
 
     fn roundtrip<'facet, T: Facet<'facet> + Debug + PartialEq>(t: &T) {
         let bytes = crate::serialize(t);
@@ -74,6 +74,11 @@ mod tests {
         let _ = crate::deserialize::<&[&[u8]]>(&[]);
     }
 
+    #[test]
+    fn test_struct() {
+        roundtrip(&Vertex::new(42));
+    }
+
     #[bench]
     fn bench_decode_u32_facet_derive(b: &mut Bencher) {
         let original = 5u32;
@@ -81,6 +86,18 @@ mod tests {
 
         b.iter(|| {
             let deserialized: u32 = deserialize(black_box(bytes.as_slice())).unwrap();
+            debug_assert_eq!(deserialized, original);
+            deserialized
+        })
+    }
+
+    #[bench]
+    fn bench_decode_vertex_facet_derive(b: &mut Bencher) {
+        let original = Vertex::new(5);
+        let bytes = crate::serialize(&original);
+
+        b.iter(|| {
+            let deserialized: Vertex = deserialize(black_box(bytes.as_slice())).unwrap();
             debug_assert_eq!(deserialized, original);
             deserialized
         })

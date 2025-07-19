@@ -1,6 +1,7 @@
 use crate::codec::DynamicCodec;
 use crate::decoder::Decoder;
 use crate::encoder::{encode_one_or_many, try_encode_in_place, Encoder};
+use crate::error::Result;
 use crate::primitive::PrimitiveCodec;
 use std::alloc::Layout;
 
@@ -32,6 +33,8 @@ impl Encoder for SliceCodec {
     }
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
+        // Using *const [u8] to represent type erased *const [T].
+        #[allow(clippy::cast_slice_different_sizes)]
         let erased = erased as *const [*const [u8]];
         let n: usize = erased.len();
 
@@ -69,7 +72,7 @@ impl Encoder for SliceCodec {
 }
 
 impl Decoder for SliceCodec {
-    fn validate(&self, _: &mut &[u8], _: usize) -> crate::error::Result<()> {
+    fn validate(&self, _: &mut &[u8], _: usize) -> Result<()> {
         slice_decode_panic()
     }
 

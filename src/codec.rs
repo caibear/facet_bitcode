@@ -78,8 +78,12 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
                     ..
                 }) => {
                     match pointee().ty {
-                        // TODO Facet isn't implemented on Box<[T]> yet.
-                        _ => todo!("Box<[T]> is ready to be implemented {shape:?}"),
+                        Type::Sequence(SequenceType::Slice(SliceType { t })) => {
+                            let _ = t;
+                            // TODO Facet isn't implemented on Box<[T]> yet.
+                            todo!("Box<[T]> is ready to be implemented {shape:?}");
+                        }
+                        _ => todo!("{shape:?}"),
                     }
                 }
                 _ => todo!("{shape:?}"),
@@ -97,5 +101,47 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
             _ => todo!("{shape:?}"),
         },
         _ => todo!("{shape:?}"),
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use facet::Facet;
+    use serde::Serialize;
+    pub use test::{black_box, Bencher};
+
+    #[derive(Debug, PartialEq, Facet, Serialize, bitcode::Encode)]
+    pub struct Vertex {
+        x: f32,
+        y: f32,
+        z: f32,
+        r: u8,
+        g: u8,
+        b: u8,
+    }
+
+    impl Vertex {
+        pub fn new(i: usize) -> Self {
+            Self {
+                x: i as f32,
+                y: i as f32,
+                z: i as f32,
+                r: i as u8,
+                g: i as u8,
+                b: i as u8,
+            }
+        }
+    }
+
+    fn mesh(n: usize) -> &'static [Vertex] {
+        Vec::leak((0..n).map(Vertex::new).collect())
+    }
+
+    pub fn mesh_one() -> &'static [Vertex] {
+        mesh(1)
+    }
+
+    pub fn mesh_1k() -> &'static [Vertex] {
+        mesh(1000)
     }
 }

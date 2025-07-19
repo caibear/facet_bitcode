@@ -15,9 +15,7 @@ fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use facet::Facet;
-    use serde::Serialize;
-    use test::{black_box, Bencher};
+    use crate::codec::tests::*;
 
     #[test]
     fn test_serialize_primitives() {
@@ -76,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_serialize_struct() {
-        #[derive(Facet)]
+        #[derive(facet::Facet)]
         struct Foo(u32, u8, bool);
 
         let out = serialize(&Foo(3, 2, true));
@@ -209,37 +207,5 @@ mod tests {
         })+};
     }
 
-    #[derive(Facet, Serialize, bitcode::Encode)]
-    struct Vertex {
-        x: f32,
-        y: f32,
-        z: f32,
-        r: u8,
-        g: u8,
-        b: u8,
-    }
-
-    fn mesh(n: usize) -> &'static [Vertex] {
-        Vec::leak(
-            (0..n)
-                .map(|i| Vertex {
-                    x: i as f32,
-                    y: i as f32,
-                    z: i as f32,
-                    r: i as u8,
-                    g: i as u8,
-                    b: i as u8,
-                })
-                .collect(),
-        )
-    }
-
-    fn mesh_one() -> &'static [Vertex] {
-        mesh(1)
-    }
-
-    fn mesh_1k() -> &'static [Vertex] {
-        mesh(1000)
-    }
     bench!(mesh_one, mesh_1k);
 }

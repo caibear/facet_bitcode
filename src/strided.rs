@@ -1,6 +1,7 @@
 use crate::codec::DynamicCodec;
 use crate::decoder::Decoder;
 use crate::encoder::{try_encode_in_place, Encoder};
+use crate::error::Result;
 use std::alloc::Layout;
 
 pub struct StridedCodec {
@@ -24,7 +25,7 @@ impl StridedCodec {
 impl Encoder for StridedCodec {
     unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
         let erased = erased.byte_add(self.offset);
-        self.codec.encode_one(erased as *const u8, out);
+        self.codec.encode_one(erased, out);
     }
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
@@ -70,6 +71,24 @@ impl Encoder for StridedCodec {
     }
 }
 
+impl Decoder for StridedCodec {
+    #[allow(unused)]
+    fn validate(&self, input: &mut &[u8], length: usize) -> Result<()> {
+        self.codec.validate(input, length)
+    }
+
+    #[allow(unused)]
+    unsafe fn decode_one(&self, input: &mut &[u8], erased: *mut u8) {
+        let erased = erased.byte_add(self.offset);
+        self.codec.decode_one(input, erased);
+    }
+
+    #[allow(unused)]
+    unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
+        todo!()
+    }
+}
+
 pub struct StructCodec(Box<[StridedCodec]>);
 
 impl StructCodec {
@@ -100,18 +119,24 @@ impl Encoder for StructCodec {
 }
 
 impl Decoder for StructCodec {
-    #[allow(unused)]
-    fn validate(&self, input: &mut &[u8], length: usize) -> crate::error::Result<()> {
-        todo!();
+    fn validate(&self, input: &mut &[u8], length: usize) -> Result<()> {
+        for field in &self.0 {
+            field.validate(input, length)?;
+        }
+        Ok(())
     }
 
     #[allow(unused)]
     unsafe fn decode_one(&self, input: &mut &[u8], erased: *mut u8) {
-        todo!();
+        for field in &self.0 {
+            field.decode_one(input, erased);
+        }
     }
 
     #[allow(unused)]
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
-        todo!();
+        for field in &self.0 {
+            field.decode_many(input, erased);
+        }
     }
 }
