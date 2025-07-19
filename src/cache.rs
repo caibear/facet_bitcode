@@ -63,7 +63,12 @@ mod shared_cache {
     }
 
     #[inline(never)]
-    fn entry_or_insert_index(cache: &[(TypeId, &'static dyn Encoder)], shape_id: TypeId) -> Result<&'static dyn Encoder, usize> {
-        cache.binary_search_by_key(&shape_id, |(id, _)| *id).map(|i| cache[i].1)
+    fn entry_or_insert_index(
+        cache: &[(TypeId, &'static dyn Encoder)],
+        shape_id: TypeId,
+    ) -> Result<&'static dyn Encoder, usize> {
+        cache
+            .binary_search_by_key(&shape_id, |(id, _)| *id)
+            .map(|i| cache[i].1)
     }
 }
