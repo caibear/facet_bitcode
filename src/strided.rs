@@ -1,28 +1,30 @@
+use crate::codec::DynamicCodec;
+use crate::decoder::Decoder;
 use crate::encoder::{try_encode_in_place, Encoder};
 use std::alloc::Layout;
 
-pub struct StridedEncoder {
+pub struct StridedCodec {
     layout: Layout,
-    encoder: Box<dyn Encoder>,
+    codec: DynamicCodec,
     stride: usize,
     offset: usize,
 }
 
-impl StridedEncoder {
-    pub fn new(layout: Layout, encoder: Box<dyn Encoder>, stride: usize, offset: usize) -> Self {
+impl StridedCodec {
+    pub fn new(layout: Layout, codec: DynamicCodec, stride: usize, offset: usize) -> Self {
         Self {
             layout,
-            encoder,
+            codec,
             stride,
             offset,
         }
     }
 }
 
-impl Encoder for StridedEncoder {
+impl Encoder for StridedCodec {
     unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
         let erased = erased.byte_add(self.offset);
-        self.encoder.encode_one(erased as *const u8, out);
+        self.codec.encode_one(erased as *const u8, out);
     }
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
@@ -36,7 +38,7 @@ impl Encoder for StridedEncoder {
             .map(|i| unsafe { (erased as *const u8).byte_add(i) });
 
         try_encode_in_place(
-            &*self.encoder,
+            &*self.codec,
             self.layout,
             n,
             &mut |mut dst| {
@@ -68,15 +70,15 @@ impl Encoder for StridedEncoder {
     }
 }
 
-pub struct StructEncoder(Box<[StridedEncoder]>);
+pub struct StructCodec(Box<[StridedCodec]>);
 
-impl StructEncoder {
-    pub fn new(fields: impl Iterator<Item = StridedEncoder>) -> Self {
+impl StructCodec {
+    pub fn new(fields: impl Iterator<Item = StridedCodec>) -> Self {
         Self(fields.collect())
     }
 }
 
-impl Encoder for StructEncoder {
+impl Encoder for StructCodec {
     unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
         for field in &self.0 {
             field.encode_one(erased, out);
@@ -94,5 +96,22 @@ impl Encoder for StructEncoder {
 
     fn in_place(&self) -> bool {
         false // TODO only 1 field and same layout then can be in_place.
+    }
+}
+
+impl Decoder for StructCodec {
+    #[allow(unused)]
+    fn validate(&self, input: &mut &[u8], length: usize) -> crate::error::Result<()> {
+        todo!();
+    }
+
+    #[allow(unused)]
+    unsafe fn decode_one(&self, input: &mut &[u8], erased: *mut u8) {
+        todo!();
+    }
+
+    #[allow(unused)]
+    unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
+        todo!();
     }
 }

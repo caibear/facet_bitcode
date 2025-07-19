@@ -40,6 +40,7 @@ mod fast_cache {
 
 mod shared_cache {
     use super::*;
+    use crate::codec::reflect_static;
     use std::sync::{PoisonError, RwLock};
 
     static SHARED_CACHE: RwLock<Vec<(TypeId, StaticCodec)>> = RwLock::new(vec![]);
@@ -57,7 +58,7 @@ mod shared_cache {
         match entry_or_insert_index(&write_cache, shape_id) {
             Ok(codec) => codec,
             Err(i) => {
-                let codec = StaticCodec::new(shape);
+                let codec = reflect_static(shape);
                 write_cache.insert(i, (shape_id, codec));
                 codec
             }

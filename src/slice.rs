@@ -1,17 +1,19 @@
+use crate::codec::DynamicCodec;
+use crate::decoder::Decoder;
 use crate::encoder::{encode_one_or_many, try_encode_in_place, Encoder};
-use crate::primitive::PrimitiveEncoder;
+use crate::primitive::PrimitiveCodec;
 use std::alloc::Layout;
 
 type LengthInt = u32; // TODO usize or u64.
 
-pub struct SliceEncoder {
-    lengths: PrimitiveEncoder<LengthInt>,
+pub struct SliceCodec {
+    lengths: PrimitiveCodec<LengthInt>,
     element_layout: Layout,
-    elements: Box<dyn Encoder>,
+    elements: DynamicCodec,
 }
 
-impl SliceEncoder {
-    pub fn new(element_layout: Layout, elements: Box<dyn Encoder>) -> Self {
+impl SliceCodec {
+    pub fn new(element_layout: Layout, elements: DynamicCodec) -> Self {
         Self {
             lengths: Default::default(),
             element_layout,
@@ -20,7 +22,7 @@ impl SliceEncoder {
     }
 }
 
-impl Encoder for SliceEncoder {
+impl Encoder for SliceCodec {
     unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
         let slice = unsafe { *(erased as *const *const [u8]) };
         let len = slice.len() as LengthInt;
@@ -64,4 +66,22 @@ impl Encoder for SliceEncoder {
             out,
         );
     }
+}
+
+impl Decoder for SliceCodec {
+    fn validate(&self, _: &mut &[u8], _: usize) -> crate::error::Result<()> {
+        slice_decode_panic()
+    }
+
+    unsafe fn decode_one(&self, _: &mut &[u8], _: *mut u8) {
+        slice_decode_panic()
+    }
+
+    unsafe fn decode_many(&self, _: &mut &[u8], _: *mut [u8]) {
+        slice_decode_panic()
+    }
+}
+
+fn slice_decode_panic() -> ! {
+    panic!("cannot deserialize &[T]");
 }

@@ -1,16 +1,17 @@
 use crate::consume::{consume_byte_arrays, consume_byte_arrays_unchecked};
+use crate::decoder::Decoder;
+use crate::encoder::Encoder;
 use crate::error::{err, Result};
-use crate::{decoder::Decoder, encoder::Encoder};
 use bytemuck::{CheckedBitPattern, NoUninit};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-pub static DUMMY_ENCODER: PrimitiveEncoder<u32> = PrimitiveEncoder(PhantomData);
+pub static DUMMY_CODEC: PrimitiveCodec<u32> = PrimitiveCodec(PhantomData);
 
 #[derive(Default)]
-pub struct PrimitiveEncoder<T>(PhantomData<fn(T)>);
+pub struct PrimitiveCodec<T>(PhantomData<fn(T)>);
 
-impl<T: NoUninit> Encoder for PrimitiveEncoder<T> {
+impl<T: NoUninit> Encoder for PrimitiveCodec<T> {
     unsafe fn encode_one(&self, erased: *const u8, out: &mut Vec<u8>) {
         let erased: &[u8] =
             std::slice::from_raw_parts(erased as *const u8, std::mem::size_of::<T>());
@@ -30,10 +31,7 @@ impl<T: NoUninit> Encoder for PrimitiveEncoder<T> {
     }
 }
 
-#[derive(Default)]
-pub struct PrimitiveDecoder<T>(PhantomData<fn(T)>);
-
-impl<T: CheckedBitPattern> Decoder for PrimitiveDecoder<T> {
+impl<T: CheckedBitPattern> Decoder for PrimitiveCodec<T> {
     fn validate(&self, input: &mut &[u8], length: usize) -> Result<()> {
         let mut bytes = consume_byte_arrays(input, length, std::mem::size_of::<T>())?;
 

@@ -6,17 +6,15 @@ use crate::error::Error;
 use facet_core::Facet;
 
 pub fn deserialize<'facet, T: Facet<'facet>>(bytes: &[u8]) -> Result<T, Error> {
-    let decoder = codec_cached(T::SHAPE).decoder.unwrap_or_else(|| {
-        panic!("{} can only be encoded, not decoded", T::SHAPE);
-    });
+    let codec = codec_cached(T::SHAPE);
 
     let mut validated = bytes;
-    decoder.validate(&mut validated, 1)?;
+    codec.validate(&mut validated, 1)?;
     expect_eof(validated)?;
 
     let mut uninit = MaybeUninit::<T>::uninit();
     let mut decoded = bytes;
-    unsafe { decoder.decode_one(&mut decoded, uninit.as_mut_ptr() as *mut u8) };
+    unsafe { codec.decode_one(&mut decoded, uninit.as_mut_ptr() as *mut u8) };
     // Important assertion, validate and decode should consume the exact same amount of input.
     debug_assert_eq!(validated.len(), decoded.len());
 
@@ -68,6 +66,12 @@ mod tests {
         assert!(crate::deserialize::<char>(&crate::serialize(&0xD800u32)).is_err());
         assert!(crate::deserialize::<char>(&crate::serialize(&0xDFFFu32)).is_err());
         assert!(crate::deserialize::<char>(&crate::serialize(&(0xDFFFu32 + 1))).is_ok());
+    }
+
+    #[test]
+    #[should_panic = "cannot deserialize &[T]"]
+    fn test_invalid_deserialize_slice() {
+        let _ = crate::deserialize::<&[&[u8]]>(&[]);
     }
 
     #[bench]
