@@ -5,6 +5,7 @@ extern crate alloc;
 extern crate test;
 
 mod cache;
+mod codec;
 mod consume;
 mod decoder;
 mod deserialize;

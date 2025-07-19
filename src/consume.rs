@@ -1,38 +1,35 @@
-// Copied from bitcode.
+use crate::error::{err, Result};
 
-use crate::error::{err, error, Result};
-
-/// Attempts to claim `bytes` bytes out of `input`.
-pub fn _consume_bytes<'a>(input: &mut &'a [u8], bytes: usize) -> Result<&'a [u8]> {
-    if bytes > input.len() {
-        return err("EOF");
-    }
-    let (bytes, remaining) = input.split_at(bytes);
-    *input = remaining;
-    Ok(bytes)
-}
-
-/// Attempts to claim one byte out of `input`.
-pub fn _consume_byte(input: &mut &[u8]) -> Result<u8> {
-    Ok(_consume_bytes(input, 1)?[0])
-}
-
-/// Like `consume_bytes` but consumes `[u8; N]` instead of `u8`.
-pub fn _consume_byte_arrays<'a, const N: usize>(
+pub fn consume_byte_arrays<'a>(
     input: &mut &'a [u8],
-    length: usize,
-) -> Result<&'a [[u8; N]]> {
-    // Avoid * overflow by using / instead.
-    if input.len() / N < length {
+    num_arrays: usize,
+    array_length: usize,
+) -> Result<&'a [u8]> {
+    // Uses division to avoid the posibility of array_length * num_arrays overflowing.
+    if input.len() / array_length < num_arrays {
         return err("EOF");
     }
+    // Safety: Checked that num_arrays * array_length bytes exists above.
+    unsafe {
+        Ok(consume_byte_arrays_unchecked(
+            input,
+            num_arrays,
+            array_length,
+        ))
+    }
+}
 
-    // Safety: input.len() >= mid since we've checked it above.
-    let mid = length * N;
-    let (bytes, remaining) = unsafe { (input.get_unchecked(..mid), input.get_unchecked(mid..)) };
-
+/// Doesn't actually return arrays because use constants derived from generics to form types.
+/// Safety: validate_byte_arrays must have succeded with the same parameters.
+pub unsafe fn consume_byte_arrays_unchecked<'a>(
+    input: &mut &'a [u8],
+    num_arrays: usize,
+    array_length: usize,
+) -> &'a [u8] {
+    let total_bytes = num_arrays.unchecked_mul(array_length);
+    let (bytes, remaining) = input.split_at_unchecked(total_bytes);
     *input = remaining;
-    Ok(bytemuck::cast_slice(bytes))
+    bytes
 }
 
 /// Check if `input` is empty or return error.
@@ -43,11 +40,4 @@ pub fn expect_eof(input: &[u8]) -> Result<()> {
     } else {
         Ok(())
     }
-}
-
-/// Returns `Ok(length * x)` if it does not overflow.
-pub fn _mul_length(length: usize, x: usize) -> Result<usize> {
-    length
-        .checked_mul(x)
-        .ok_or_else(|| error("length overflow"))
 }

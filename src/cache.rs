@@ -1,28 +1,28 @@
-use crate::encoder::Encoder;
+use crate::codec::StaticCodec;
 use facet_core::Shape;
 use std::any::TypeId;
 
 #[cfg(feature = "std")]
-pub use fast_cache::encoder_cached;
+pub use fast_cache::codec_cached;
 #[cfg(not(feature = "std"))]
-pub use shared_cache::encoder_cached;
+pub use shared_cache::codec_cached;
 
 #[cfg(feature = "std")]
 mod fast_cache {
     use super::*;
-    use crate::primitive::_DUMMY_ENCODER;
+    use crate::codec::_DUMMY_CODEC;
     use std::cell::Cell;
 
     struct _Dummy;
     thread_local! {
-        static FAST_ENCODER_CACHE: Cell<(TypeId, &'static dyn Encoder)> = std::cell::Cell::new((TypeId::of::<_Dummy>(), &_DUMMY_ENCODER));
+        static FAST_CACHE: Cell<(TypeId, StaticCodec)> = std::cell::Cell::new((TypeId::of::<_Dummy>(), _DUMMY_CODEC));
     }
 
     // Saves 3ns over shared_cache in benchmark with 0 contention.
     #[inline(always)]
-    pub fn encoder_cached(shape: &'static Shape) -> &'static dyn Encoder {
+    pub fn codec_cached(shape: &'static Shape) -> StaticCodec {
         let shape_id = shape.id.get();
-        let (id, cached) = FAST_ENCODER_CACHE.get();
+        let (id, cached) = FAST_CACHE.get();
         if id == shape_id {
             cached
         } else {
@@ -31,42 +31,44 @@ mod fast_cache {
     }
 
     #[cold]
-    fn cache_miss(shape: &'static Shape) -> &'static dyn Encoder {
-        let encoder = super::shared_cache::encoder_cached(shape);
-        FAST_ENCODER_CACHE.set((shape.id.get(), encoder));
-        encoder
+    fn cache_miss(shape: &'static Shape) -> StaticCodec {
+        let codec = super::shared_cache::codec_cached(shape);
+        FAST_CACHE.set((shape.id.get(), codec));
+        codec
     }
 }
 
 mod shared_cache {
     use super::*;
-    use crate::serialize::encoder;
-    use std::sync::RwLock;
+    use std::sync::{PoisonError, RwLock};
 
-    static ENCODER_CACHE: RwLock<Vec<(TypeId, &'static dyn Encoder)>> = RwLock::new(vec![]);
+    static SHARED_CACHE: RwLock<Vec<(TypeId, StaticCodec)>> = RwLock::new(vec![]);
 
-    pub fn encoder_cached(shape: &'static Shape) -> &'static dyn Encoder {
+    pub fn codec_cached(shape: &'static Shape) -> StaticCodec {
         let shape_id = shape.id.get();
-        if let Ok(encoder) = entry_or_insert_index(&ENCODER_CACHE.read().unwrap(), shape_id) {
-            return encoder;
+        if let Ok(codec) = entry_or_insert_index(
+            &SHARED_CACHE.read().unwrap_or_else(PoisonError::into_inner),
+            shape_id,
+        ) {
+            return codec;
         }
 
-        let mut write_cache = ENCODER_CACHE.write().unwrap();
+        let mut write_cache = SHARED_CACHE.write().unwrap_or_else(PoisonError::into_inner);
         match entry_or_insert_index(&write_cache, shape_id) {
-            Ok(encoder) => encoder,
+            Ok(codec) => codec,
             Err(i) => {
-                let encoder = Box::leak(encoder(shape));
-                write_cache.insert(i, (shape_id, encoder));
-                encoder
+                let codec = StaticCodec::new(shape);
+                write_cache.insert(i, (shape_id, codec));
+                codec
             }
         }
     }
 
     #[inline(never)]
     fn entry_or_insert_index(
-        cache: &[(TypeId, &'static dyn Encoder)],
+        cache: &[(TypeId, StaticCodec)],
         shape_id: TypeId,
-    ) -> Result<&'static dyn Encoder, usize> {
+    ) -> Result<StaticCodec, usize> {
         cache
             .binary_search_by_key(&shape_id, |(id, _)| *id)
             .map(|i| cache[i].1)

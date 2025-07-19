@@ -1,12 +1,5 @@
-use crate::cache::encoder_cached;
-use crate::encoder::Encoder;
-use crate::primitive::PrimitiveEncoder;
-use crate::slice::SliceEncoder;
-use crate::strided::{StridedEncoder, StructEncoder};
-use facet_core::{
-    Def, Facet, KnownPointer, NumericType, PointerDef, PointerType, PrimitiveType, SequenceType,
-    Shape, SliceType, TextualType, Type, UserType, ValuePointerType,
-};
+use crate::cache::codec_cached;
+use facet_core::Facet;
 
 pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
     let mut out = vec![];
@@ -15,88 +8,8 @@ pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
 }
 
 fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
-    let encoder = encoder_cached(T::SHAPE);
+    let encoder = codec_cached(T::SHAPE).encoder;
     unsafe { encoder.encode_one(t as *const T as *const u8, out) };
-}
-
-// TODO move out of serialize.rs to output both Encoder and Option<Decoder>.
-pub fn encoder(shape: &'static Shape) -> Box<dyn Encoder> {
-    match shape.ty {
-        Type::Primitive(PrimitiveType::Numeric(NumericType::Integer { signed: false })) => {
-            match shape.layout.sized_layout().unwrap().size() {
-                1 => Box::new(PrimitiveEncoder::<u8>::default()),
-                2 => Box::new(PrimitiveEncoder::<u16>::default()),
-                4 => Box::new(PrimitiveEncoder::<u32>::default()),
-                8 => Box::new(PrimitiveEncoder::<u64>::default()),
-                // TODO detect usize.
-                _ => todo!("{shape:?}"),
-            }
-        }
-        Type::Primitive(PrimitiveType::Numeric(NumericType::Integer { signed: true })) => {
-            match shape.layout.sized_layout().unwrap().size() {
-                1 => Box::new(PrimitiveEncoder::<i8>::default()),
-                2 => Box::new(PrimitiveEncoder::<i16>::default()),
-                4 => Box::new(PrimitiveEncoder::<i32>::default()),
-                8 => Box::new(PrimitiveEncoder::<i64>::default()),
-                // TODO detect isize.
-                _ => todo!("{shape:?}"),
-            }
-        }
-        Type::Primitive(PrimitiveType::Numeric(NumericType::Float)) => {
-            match shape.layout.sized_layout().unwrap().size() {
-                4 => Box::new(PrimitiveEncoder::<f32>::default()),
-                8 => Box::new(PrimitiveEncoder::<f64>::default()),
-                _ => todo!("{shape:?}"),
-            }
-        }
-        Type::Primitive(PrimitiveType::Boolean) => Box::new(PrimitiveEncoder::<bool>::default()),
-        Type::Primitive(PrimitiveType::Textual(TextualType::Char)) => {
-            Box::new(PrimitiveEncoder::<char>::default())
-        }
-        // TODO(safety) packed struct
-        Type::User(UserType::Struct(t)) => {
-            Box::new(StructEncoder::new(t.fields.iter().map(|field| {
-                // TODO respect field.flags
-                StridedEncoder::new(
-                    field.shape.layout.sized_layout().unwrap(),
-                    encoder(field.shape),
-                    shape.layout.sized_layout().unwrap().size(),
-                    field.offset,
-                )
-            })))
-        }
-        Type::User(UserType::Opaque) => {
-            match shape.def {
-                Def::Pointer(PointerDef {
-                    known: Some(KnownPointer::Box),
-                    pointee: Some(pointee),
-                    ..
-                }) => {
-                    match pointee().ty {
-                        // Box<[T]> and &[T] have equivilant reprs so this is safe.
-                        // TODO Facet isn't implemented on Box<[T]> yet.
-                        Type::Sequence(SequenceType::Slice(SliceType { t })) => Box::new(
-                            SliceEncoder::new(t.layout.sized_layout().unwrap(), encoder(t)),
-                        ),
-                        _ => todo!("{shape:?}"),
-                    }
-                }
-                _ => todo!("{shape:?}"),
-            }
-        }
-        Type::Pointer(PointerType::Reference(ValuePointerType {
-            mutable: false,
-            wide: true,
-            target,
-        })) => match target().ty {
-            Type::Sequence(SequenceType::Slice(SliceType { t })) => Box::new(SliceEncoder::new(
-                t.layout.sized_layout().unwrap(),
-                encoder(t),
-            )),
-            _ => todo!("{shape:?}"),
-        },
-        _ => todo!("{shape:?}"),
-    }
 }
 
 #[cfg(test)]

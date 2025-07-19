@@ -1,4 +1,3 @@
-// Copied from bitcode.
 
 pub type Result<T> = core::result::Result<T, crate::Error>;
 
