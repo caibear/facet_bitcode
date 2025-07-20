@@ -32,18 +32,21 @@ impl Encoder for StridedCodec {
         let erased = erased.byte_add(self.offset);
         let n = erased.len();
 
-        let stride = self.stride;
-        let copy_size = self.layout.size();
-        let items = (0..n * stride)
-            .step_by(stride)
-            .map(|i| unsafe { (erased as *const u8).byte_add(i) });
-
         try_encode_in_place(
             &*self.codec,
             self.layout,
             n,
             &mut |mut dst| {
-                let items = items.clone();
+                let stride = self.stride;
+                let copy_size = self.layout.size();
+
+                let mut ptr = erased as *const u8;
+                let items = (0..n).map(|_| {
+                    let p = ptr;
+                    unsafe { ptr = ptr.add(stride) };
+                    p
+                });
+
                 macro_rules! copy_for_size {
                     ($copy_size:expr) => {
                         for src in items {
@@ -88,18 +91,21 @@ impl Decoder for StridedCodec {
         let erased = erased.byte_add(self.offset);
         let n = erased.len();
 
-        let stride = self.stride;
-        let copy_size = self.layout.size();
-        let items = (0..n * stride)
-            .step_by(stride)
-            .map(|i| unsafe { (erased as *mut u8).byte_add(i) });
-
         try_decode_in_place(
             &*self.codec,
             self.layout,
             n,
             &mut |mut src| {
-                let items = items.clone();
+                let stride = self.stride;
+                let copy_size = self.layout.size();
+
+                let mut ptr = erased as *mut u8;
+                let items = (0..n).map(|_| {
+                    let p = ptr;
+                    unsafe { ptr = ptr.add(stride) };
+                    p
+                });
+
                 macro_rules! copy_for_size {
                     ($copy_size:expr) => {
                         for dst in items {
