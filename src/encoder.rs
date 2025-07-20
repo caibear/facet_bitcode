@@ -33,21 +33,20 @@ pub unsafe fn try_encode_in_place(
     out: &mut Vec<u8>,
 ) {
     let dst_size = layout.size() * n_elements;
-    let (dst, staging) = if codec.in_place() {
+    let (dst, allocation) = if codec.in_place() {
         out.reserve(dst_size);
         (out.as_mut_ptr_range().end, None)
     } else {
-        let (staging_layout, stride) = layout.repeat(n_elements).unwrap();
-        debug_assert_eq!(stride, layout.size());
-        let staging_elements = std::alloc::alloc(staging_layout); // TODO scratch allocator like rkyv?
-        (staging_elements, Some((staging_elements, staging_layout)))
+        let (allocation, stride) = layout.repeat(n_elements).unwrap();
+        debug_assert_eq!(stride, layout.size()); // TODO when can this fail?
+        (std::alloc::alloc(allocation), Some(allocation)) // TODO scratch allocator like rkyv?
     };
 
     encode(dst);
 
-    if let Some((staging_elements, staging_layout)) = staging {
+    if let Some(allocation) = allocation {
         codec.encode_many(std::ptr::slice_from_raw_parts(dst, n_elements), out);
-        std::alloc::dealloc(staging_elements, staging_layout);
+        std::alloc::dealloc(dst, allocation);
     } else {
         out.set_len(out.len() + dst_size);
     }

@@ -39,28 +39,20 @@ pub unsafe fn try_decode_in_place(
     decode: &mut dyn FnMut(*const u8),
     input: &mut &[u8],
 ) {
-    let (src, staging) = if codec.in_place() {
-        (
-            consume_byte_arrays_unchecked(input, n_elements, layout.size()).as_ptr(),
-            None,
-        )
+    let (src, allocation) = if codec.in_place() {
+        let src = consume_byte_arrays_unchecked(input, n_elements, layout.size()).as_ptr();
+        (src, None)
     } else {
-        let (staging_layout, stride) = layout.repeat(n_elements).unwrap();
+        let (allocation, stride) = layout.repeat(n_elements).unwrap();
         debug_assert_eq!(stride, layout.size());
-        let staging_elements = std::alloc::alloc(staging_layout); // TODO scratch allocator like rkyv?
-        codec.decode_many(
-            input,
-            std::ptr::slice_from_raw_parts_mut(staging_elements, n_elements),
-        );
-        (
-            staging_elements as *const u8,
-            Some((staging_elements, staging_layout)),
-        )
+        let src = std::alloc::alloc(allocation); // TODO scratch allocator like rkyv?
+        codec.decode_many(input, std::ptr::slice_from_raw_parts_mut(src, n_elements));
+        (src as *const u8, Some(allocation))
     };
 
     decode(src);
 
-    if let Some((staging_elements, staging_layout)) = staging {
-        std::alloc::dealloc(staging_elements, staging_layout);
+    if let Some(allocation) = allocation {
+        std::alloc::dealloc(src as *mut u8, allocation);
     }
 }
