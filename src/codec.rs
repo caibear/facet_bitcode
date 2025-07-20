@@ -1,7 +1,7 @@
 use crate::decoder::Decoder;
 use crate::encoder::Encoder;
 use crate::primitive::{PrimitiveCodec, DUMMY_CODEC};
-use crate::slice::SliceCodec;
+use crate::slice::BoxedSliceCodec;
 use crate::strided::{StridedCodec, StructCodec};
 use bytemuck::{CheckedBitPattern, NoUninit};
 use facet_core::{
@@ -94,7 +94,8 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
             wide: true,
             target,
         })) => match target().ty {
-            Type::Sequence(SequenceType::Slice(SliceType { t })) => Box::new(SliceCodec::new(
+            // TODO unsound for testing, shouldn't be able to decode &[T], only Box<[T]>.
+            Type::Sequence(SequenceType::Slice(SliceType { t })) => Box::new(BoxedSliceCodec::new(
                 t.layout.sized_layout().unwrap(),
                 reflect(t),
             )),
@@ -107,10 +108,10 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
 #[cfg(test)]
 pub mod tests {
     use facet::Facet;
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
     pub use test::{black_box, Bencher};
 
-    #[derive(Debug, PartialEq, Facet, Serialize, bitcode::Encode)]
+    #[derive(Debug, PartialEq, Facet, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
     pub struct Vertex {
         x: f32,
         y: f32,

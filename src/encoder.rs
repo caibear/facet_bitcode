@@ -8,6 +8,7 @@ pub trait Encoder: Send + Sync {
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>);
 
+    // TODO used by try_decode_in_place, move to Codec?
     fn in_place(&self) -> bool {
         false
     }

@@ -30,23 +30,30 @@ impl<T: NoUninit> Encoder for PrimitiveCodec<T> {
     }
 }
 
+impl<T: CheckedBitPattern> PrimitiveCodec<T> {
+    /// Safety: `bytes` must contain at least enough bytes to decode `length` primitives.
+    pub unsafe fn iter<'a>(
+        &'a self,
+        mut bytes: &'a [u8],
+        length: usize,
+    ) -> impl Iterator<Item = T::Bits> + 'a {
+        (0..length).map(move |_| unsafe {
+            let mut t: MaybeUninit<T::Bits> = MaybeUninit::uninit();
+            self.decode_one(&mut bytes, t.as_mut_ptr() as *mut u8);
+            t.assume_init()
+        })
+    }
+}
+
 impl<T: CheckedBitPattern> Decoder for PrimitiveCodec<T> {
     fn validate(&self, input: &mut &[u8], length: usize) -> Result<()> {
-        let mut bytes = consume_byte_arrays(input, length, std::mem::size_of::<T>())?;
+        let bytes = consume_byte_arrays(input, length, std::mem::size_of::<T>())?;
+
+        // Safety: `bytes` contains enough bytes to decode `length` primitives.
+        let iter = unsafe { self.iter(bytes, length) };
 
         // Optimizes much better than Iterator::any.
-        if (0..length)
-            .filter(|_| {
-                let t = unsafe {
-                    let mut t: MaybeUninit<T::Bits> = MaybeUninit::uninit();
-                    self.decode_one(&mut bytes, t.as_mut_ptr() as *mut u8);
-                    t.assume_init()
-                };
-                !T::is_valid_bit_pattern(&t)
-            })
-            .count()
-            != 0
-        {
+        if iter.filter(|t| !T::is_valid_bit_pattern(&t)).count() != 0 {
             return err("invalid bit pattern");
         }
         Ok(())

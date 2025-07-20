@@ -12,6 +12,8 @@ mod deserialize;
 mod encoder;
 mod error;
 mod primitive;
+#[rustfmt::skip]
+mod raw_vec_fork;
 mod serialize;
 mod slice;
 mod strided;

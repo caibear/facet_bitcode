@@ -1,5 +1,5 @@
 use crate::codec::DynamicCodec;
-use crate::decoder::Decoder;
+use crate::decoder::{try_decode_in_place, Decoder};
 use crate::encoder::{try_encode_in_place, Encoder};
 use crate::error::Result;
 use std::alloc::Layout;
@@ -85,7 +85,45 @@ impl Decoder for StridedCodec {
 
     #[allow(unused)]
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
-        todo!()
+        let erased = erased.byte_add(self.offset);
+        let n = erased.len();
+
+        let stride = self.stride;
+        let copy_size = self.layout.size();
+        let items = (0..n * stride)
+            .step_by(stride)
+            .map(|i| unsafe { (erased as *mut u8).byte_add(i) });
+
+        try_decode_in_place(
+            &*self.codec,
+            self.layout,
+            n,
+            &mut |mut src| {
+                let items = items.clone();
+                macro_rules! copy_for_size {
+                    ($copy_size:expr) => {
+                        for dst in items {
+                            std::ptr::copy_nonoverlapping(src, dst, $copy_size);
+                            src = src.byte_add($copy_size);
+                        }
+                    };
+                }
+
+                // Optimize common sizes. TODO optmize for all sizes <= 64, not just powers of 2.
+                match copy_size {
+                    0 => todo!(),
+                    1 => copy_for_size!(1),
+                    2 => copy_for_size!(2),
+                    4 => copy_for_size!(4),
+                    8 => copy_for_size!(8),
+                    16 => copy_for_size!(16),
+                    32 => copy_for_size!(32),
+                    64 => copy_for_size!(64),
+                    _ => copy_for_size!(copy_size),
+                }
+            },
+            input,
+        );
     }
 }
 

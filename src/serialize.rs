@@ -163,7 +163,7 @@ mod tests {
     macro_rules! bench {
         ($($b:ident),+) => { $(paste::paste! {
             #[bench]
-            fn [<bench_ $b _facet_bitcode>](b: &mut Bencher) {
+            fn [<bench_serialize_ $b _facet_bitcode>](b: &mut Bencher) {
                 let v = $b();
                 let mut out = vec![];
                 b.iter(|| {
@@ -174,13 +174,13 @@ mod tests {
             }
 
             #[bench]
-            fn [<bench_ $b _serde_bitcode>](b: &mut Bencher) {
+            fn [<bench_serialize_ $b _serde_bitcode>](b: &mut Bencher) {
                 let v = $b();
                 b.iter(|| black_box(bitcode::serialize(black_box(&v))))
             }
 
             #[bench]
-            fn [<bench_ $b _derive_bitcode>](b: &mut Bencher) {
+            fn [<bench_serialize_ $b _derive_bitcode>](b: &mut Bencher) {
                 let v = $b();
                 let mut buffer = bitcode::Buffer::new();
                 b.iter(|| {
@@ -189,7 +189,7 @@ mod tests {
             }
 
             #[bench]
-            fn [<bench_ $b _bincode>](b: &mut Bencher) {
+            fn [<bench_serialize_ $b _bincode>](b: &mut Bencher) {
                 let v = $b();
                 let mut out = vec![];
                 b.iter(|| {
@@ -200,7 +200,7 @@ mod tests {
             }
 
             #[bench]
-            fn [<bench_ $b _facet_xdr>](b: &mut Bencher) {
+            fn [<bench_serialize_ $b _facet_xdr>](b: &mut Bencher) {
                 let v = $b();
                 b.iter(|| black_box(facet_xdr::to_vec(black_box(&v)).unwrap()))
             }
