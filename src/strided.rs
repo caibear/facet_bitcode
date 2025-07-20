@@ -30,18 +30,17 @@ impl Encoder for StridedCodec {
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
         let erased = erased.byte_add(self.offset);
-        let n = erased.len();
 
         try_encode_in_place(
             &*self.codec,
             self.layout,
-            n,
+            erased.len(),
             &mut |mut dst| {
                 let stride = self.stride;
                 let copy_size = self.layout.size();
 
                 let mut ptr = erased as *const u8;
-                let items = (0..n).map(|_| {
+                let items = (0..erased.len()).map(|_| {
                     let p = ptr;
                     unsafe { ptr = ptr.add(stride) };
                     p
@@ -89,18 +88,17 @@ impl Decoder for StridedCodec {
     #[allow(unused)]
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
         let erased = erased.byte_add(self.offset);
-        let n = erased.len();
 
         try_decode_in_place(
             &*self.codec,
             self.layout,
-            n,
+            erased.len(),
             &mut |mut src| {
                 let stride = self.stride;
                 let copy_size = self.layout.size();
 
                 let mut ptr = erased as *mut u8;
-                let items = (0..n).map(|_| {
+                let items = (0..erased.len()).map(|_| {
                     let p = ptr;
                     unsafe { ptr = ptr.add(stride) };
                     p
