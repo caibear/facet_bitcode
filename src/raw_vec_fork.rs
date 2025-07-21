@@ -1,6 +1,7 @@
-use std::alloc;
-use std::alloc::{handle_alloc_error, Layout};
-use std::ptr::NonNull;
+use core::alloc::Layout;
+use alloc::alloc;
+use alloc::handle_alloc_error;
+use core::ptr::NonNull;
 
 // Based on https://github.com/rust-lang/rust/blob/6707bf0f59485cf054ac1095725df43220e4be20/library/alloc/src/raw_vec/mod.rs#L32C1-L38C2
 enum AllocInit {
@@ -81,7 +82,7 @@ impl RawVecInner {
         // matches the size requested. If that ever changes, the capacity
         // here should change to `ptr.len() / size_of::<T>()`.
         Ok(Self {
-            ptr: ptr,
+            ptr,
             cap: capacity,
         })
     }

@@ -1,26 +1,23 @@
-use crate::codec::StaticCodec;
+use crate::codec::Codec;
 use facet_core::Shape;
-use std::any::TypeId;
+pub use fast::reflect;
 
-#[cfg(feature = "std")]
-pub use fast_cache::codec_cached;
-#[cfg(not(feature = "std"))]
-pub use shared_cache::codec_cached;
+type StaticCodec = &'static dyn Codec;
 
-#[cfg(feature = "std")]
-mod fast_cache {
+mod fast {
     use super::*;
-    use crate::codec::_DUMMY_CODEC;
-    use std::cell::Cell;
+    use crate::primitive::DUMMY_CODEC;
+    use core::any::TypeId;
+    use core::cell::Cell;
 
     struct _Dummy;
     thread_local! {
-        static FAST_CACHE: Cell<(TypeId, StaticCodec)> = std::cell::Cell::new((TypeId::of::<_Dummy>(), _DUMMY_CODEC));
+        static FAST_CACHE: Cell<(TypeId, StaticCodec)> = std::cell::Cell::new((TypeId::of::<_Dummy>(), &DUMMY_CODEC));
     }
 
-    // Saves 3ns over shared_cache in benchmark with 0 contention.
+    // Saves 3ns over shared cache in benchmark with 0 contention.
     #[inline(always)]
-    pub fn codec_cached(shape: &'static Shape) -> StaticCodec {
+    pub fn reflect(shape: &'static Shape) -> StaticCodec {
         let shape_id = shape.id.get();
         let (id, cached) = FAST_CACHE.get();
         if id == shape_id {
@@ -32,20 +29,20 @@ mod fast_cache {
 
     #[cold]
     fn cache_miss(shape: &'static Shape) -> StaticCodec {
-        let codec = super::shared_cache::codec_cached(shape);
+        let codec = super::shared::reflect(shape);
         FAST_CACHE.set((shape.id.get(), codec));
         codec
     }
 }
 
-mod shared_cache {
+mod shared {
     use super::*;
-    use crate::codec::reflect_static;
+    use core::any::TypeId;
     use std::sync::{PoisonError, RwLock};
 
     static SHARED_CACHE: RwLock<Vec<(TypeId, StaticCodec)>> = RwLock::new(vec![]);
 
-    pub fn codec_cached(shape: &'static Shape) -> StaticCodec {
+    pub fn reflect(shape: &'static Shape) -> StaticCodec {
         let shape_id = shape.id.get();
         if let Ok(codec) = entry_or_insert_index(
             &SHARED_CACHE.read().unwrap_or_else(PoisonError::into_inner),
@@ -58,7 +55,7 @@ mod shared_cache {
         match entry_or_insert_index(&write_cache, shape_id) {
             Ok(codec) => codec,
             Err(i) => {
-                let codec = reflect_static(shape);
+                let codec = Box::leak(crate::codec::reflect(shape));
                 write_cache.insert(i, (shape_id, codec));
                 codec
             }

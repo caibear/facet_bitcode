@@ -2,7 +2,9 @@ use crate::codec::DynamicCodec;
 use crate::decoder::{try_decode_in_place, Decoder};
 use crate::encoder::{try_encode_in_place, Encoder};
 use crate::error::Result;
-use std::alloc::Layout;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::alloc::Layout;
 
 pub struct StridedCodec {
     layout: Layout,
@@ -49,7 +51,7 @@ impl Encoder for StridedCodec {
                 macro_rules! copy_for_size {
                     ($copy_size:expr) => {
                         for src in items {
-                            std::ptr::copy_nonoverlapping(src, dst, $copy_size);
+                            core::ptr::copy_nonoverlapping(src, dst, $copy_size);
                             dst = dst.byte_add($copy_size);
                         }
                     };
@@ -107,7 +109,7 @@ impl Decoder for StridedCodec {
                 macro_rules! copy_for_size {
                     ($copy_size:expr) => {
                         for dst in items {
-                            std::ptr::copy_nonoverlapping(src, dst, $copy_size);
+                            core::ptr::copy_nonoverlapping(src, dst, $copy_size);
                             src = src.byte_add($copy_size);
                         }
                     };

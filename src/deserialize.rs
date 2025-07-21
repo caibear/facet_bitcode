@@ -1,12 +1,10 @@
-use std::mem::MaybeUninit;
-
-use crate::cache::codec_cached;
 use crate::consume::expect_eof;
 use crate::error::Error;
+use core::mem::MaybeUninit;
 use facet_core::Facet;
 
 pub fn deserialize<'facet, T: Facet<'facet>>(bytes: &[u8]) -> Result<T, Error> {
-    let codec = codec_cached(T::SHAPE);
+    let codec = crate::reflect(T::SHAPE);
 
     let mut validated = bytes;
     codec.validate(&mut validated, 1)?;
@@ -25,11 +23,14 @@ pub fn deserialize<'facet, T: Facet<'facet>>(bytes: &[u8]) -> Result<T, Error> {
 mod tests {
     use super::*;
     use crate::codec::tests::*;
-    use std::fmt::Debug;
+    use alloc::boxed::Box;
+    use alloc::vec;
+    use alloc::vec::Vec;
+    use core::fmt::Debug;
 
     fn roundtrip<'facet, T: Facet<'facet> + Debug + PartialEq>(t: &T) {
         let bytes = crate::serialize(t);
-        let deserialized = crate::deserialize::<T>(&bytes).expect(std::any::type_name::<T>());
+        let deserialized = crate::deserialize::<T>(&bytes).expect(core::any::type_name::<T>());
         assert_eq!(t, &deserialized);
     }
 
@@ -115,7 +116,7 @@ mod tests {
                     let deserialized: &'static [Vertex] = deserialize(black_box(bytes.as_slice())).unwrap();
                     debug_assert_eq!(deserialized, original);
                     // TODO properly implement deserialize Box<[T]> once the facet impl is added.
-                    let deserialized: Box<[Vertex]> = unsafe { std::mem::transmute(deserialized) };
+                    let deserialized: Box<[Vertex]> = unsafe { core::mem::transmute(deserialized) };
                     deserialized
                 })
             }
@@ -137,7 +138,7 @@ mod tests {
                 let mut buffer = bitcode::Buffer::new();
 
                 let original = $b();
-                let bytes = buffer.encode(original).to_owned();
+                let bytes = buffer.encode(original).to_vec();
 
                 b.iter(|| {
                     let deserialized: Box<[Vertex]> = buffer.decode(black_box(bytes.as_slice())).unwrap();

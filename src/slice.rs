@@ -4,8 +4,9 @@ use crate::encoder::{encode_one_or_many, try_encode_in_place, Encoder};
 use crate::error::{err, error, Result};
 use crate::primitive::PrimitiveCodec;
 use crate::raw_vec_fork::RawVecInner;
-use std::alloc::Layout;
-use std::mem::MaybeUninit;
+use alloc::vec::Vec;
+use core::alloc::Layout;
+use core::mem::MaybeUninit;
 
 type LengthInt = u32; // TODO usize or u64.
 
@@ -50,7 +51,7 @@ impl Encoder for BoxedSliceCodec {
                 for slice in slices.clone() {
                     n_elements += slice.len();
                     *(dst as *mut LengthInt) = slice.len() as LengthInt;
-                    dst = dst.byte_add(std::mem::size_of::<LengthInt>());
+                    dst = dst.byte_add(core::mem::size_of::<LengthInt>());
                 }
             },
             out,
@@ -64,7 +65,7 @@ impl Encoder for BoxedSliceCodec {
                 let element_size = self.element_layout.size();
                 for slice in slices.clone() {
                     let slice_len_bytes = slice.len().unchecked_mul(element_size);
-                    std::ptr::copy_nonoverlapping(slice as *const u8, dst, slice_len_bytes);
+                    core::ptr::copy_nonoverlapping(slice as *const u8, dst, slice_len_bytes);
                     dst = dst.byte_add(slice_len_bytes);
                 }
             },
@@ -115,5 +116,5 @@ impl Decoder for BoxedSliceCodec {
 fn allocate_erased_box(length: usize, element_layout: Layout) -> *mut [u8] {
     let erased_raw_vec = RawVecInner::with_capacity(length, element_layout);
     debug_assert_eq!(erased_raw_vec.cap, length); // Current implementation guarantees this.
-    std::ptr::slice_from_raw_parts_mut(erased_raw_vec.ptr.as_ptr(), length)
+    core::ptr::slice_from_raw_parts_mut(erased_raw_vec.ptr.as_ptr(), length)
 }

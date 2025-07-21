@@ -1,5 +1,6 @@
 use crate::codec::Codec;
-use std::alloc::Layout;
+use alloc::vec::Vec;
+use core::alloc::Layout;
 
 pub trait Encoder: Send + Sync {
     /// Required have the exact same results (but possibly faster) as
@@ -39,14 +40,14 @@ pub unsafe fn try_encode_in_place(
     } else {
         let (allocation, stride) = layout.repeat(n_elements).unwrap();
         debug_assert_eq!(stride, layout.size()); // TODO when can this fail?
-        (std::alloc::alloc(allocation), Some(allocation)) // TODO scratch allocator like rkyv?
+        (alloc::alloc::alloc(allocation), Some(allocation)) // TODO scratch allocator like rkyv?
     };
 
     encode(dst);
 
     if let Some(allocation) = allocation {
-        codec.encode_many(std::ptr::slice_from_raw_parts(dst, n_elements), out);
-        std::alloc::dealloc(dst, allocation);
+        codec.encode_many(core::ptr::slice_from_raw_parts(dst, n_elements), out);
+        alloc::alloc::dealloc(dst, allocation);
     } else {
         out.set_len(out.len() + dst_size);
     }

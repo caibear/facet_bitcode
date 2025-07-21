@@ -1,7 +1,7 @@
 use crate::codec::Codec;
 use crate::consume::consume_byte_arrays_unchecked;
 use crate::error::Result;
-use std::alloc::Layout;
+use core::alloc::Layout;
 
 pub trait Decoder: Send + Sync {
     /// Validates that enough bytes are present and that they
@@ -45,14 +45,14 @@ pub unsafe fn try_decode_in_place(
     } else {
         let (allocation, stride) = layout.repeat(n_elements).unwrap();
         debug_assert_eq!(stride, layout.size());
-        let src = std::alloc::alloc(allocation); // TODO scratch allocator like rkyv?
-        codec.decode_many(input, std::ptr::slice_from_raw_parts_mut(src, n_elements));
+        let src = alloc::alloc::alloc(allocation); // TODO scratch allocator like rkyv?
+        codec.decode_many(input, core::ptr::slice_from_raw_parts_mut(src, n_elements));
         (src as *const u8, Some(allocation))
     };
 
     decode(src);
 
     if let Some(allocation) = allocation {
-        std::alloc::dealloc(src as *mut u8, allocation);
+        alloc::alloc::dealloc(src as *mut u8, allocation);
     }
 }

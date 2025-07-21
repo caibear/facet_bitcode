@@ -1,4 +1,5 @@
-use crate::cache::codec_cached;
+use alloc::vec;
+use alloc::vec::Vec;
 use facet_core::Facet;
 
 pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
@@ -8,7 +9,7 @@ pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
 }
 
 fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
-    let codec = codec_cached(T::SHAPE);
+    let codec = crate::reflect(T::SHAPE);
     unsafe { codec.encode_one(t as *const T as *const u8, out) };
 }
 

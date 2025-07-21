@@ -1,8 +1,9 @@
 use crate::decoder::Decoder;
 use crate::encoder::Encoder;
-use crate::primitive::{PrimitiveCodec, DUMMY_CODEC};
+use crate::primitive::PrimitiveCodec;
 use crate::slice::BoxedSliceCodec;
 use crate::strided::{StridedCodec, StructCodec};
+use alloc::boxed::Box;
 use bytemuck::{CheckedBitPattern, NoUninit};
 use facet_core::{
     Def, KnownPointer, NumericType, PointerDef, PointerType, PrimitiveType, SequenceType, Shape,
@@ -11,20 +12,10 @@ use facet_core::{
 
 pub trait Codec: Encoder + Decoder {}
 impl<T: Encoder + Decoder> Codec for T {}
-
-pub static _DUMMY_CODEC: StaticCodec = &DUMMY_CODEC;
-
-pub type StaticCodec = &'static dyn Codec;
 pub type DynamicCodec = Box<dyn Codec>;
 
 fn primitive<T: NoUninit + CheckedBitPattern + Default>() -> DynamicCodec {
     Box::new(PrimitiveCodec::<T>::default())
-}
-
-/// Takes a &'static Shape to make sure we aren't leaking memory on runtime types.
-/// Care still has to be taken to only call this once per unique shape.
-pub fn reflect_static(shape: &'static Shape) -> StaticCodec {
-    Box::leak(reflect(shape))
 }
 
 pub fn reflect(shape: &Shape) -> DynamicCodec {
@@ -107,6 +98,7 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
 
 #[cfg(test)]
 pub mod tests {
+    use alloc::vec::Vec;
     use facet::Facet;
     use serde::{Deserialize, Serialize};
     pub use test::{black_box, Bencher};
