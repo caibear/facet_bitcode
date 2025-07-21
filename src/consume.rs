@@ -19,8 +19,8 @@ pub fn consume_byte_arrays<'a>(
     }
 }
 
-/// Doesn't actually return arrays because use constants derived from generics to form types.
-/// Safety: validate_byte_arrays must have succeded with the same parameters.
+/// Doesn't actually return arrays because can't use constants derived from generics to form types.
+/// Safety: input.len() >= num_arrays * array_length (which must not overflow).
 pub unsafe fn consume_byte_arrays_unchecked<'a>(
     input: &mut &'a [u8],
     num_arrays: usize,

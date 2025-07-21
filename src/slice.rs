@@ -78,7 +78,8 @@ impl Decoder for BoxedSliceCodec {
     fn validate(&self, input: &mut &[u8], length: usize) -> Result<()> {
         let before_lengths_consumed = *input;
         self.lengths.validate(input, length)?;
-        // Safety: we validated that input contained enough bytes before validate was called, and we use that slice, not the modified input.
+        // Safety: we validated that input contained enough bytes before
+        // validate was called, and we use that slice, not the modified input.
         let iter = unsafe { self.lengths.iter(before_lengths_consumed, length) };
 
         if length > u32::MAX as usize {

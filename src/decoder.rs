@@ -17,7 +17,6 @@ pub trait Decoder: Send + Sync {
     /// Safety: ^^^
     unsafe fn decode_one(&self, input: &mut &[u8], erased: *mut u8);
 
-    /// TODO(optimization) use a structure that can avoid mutating length such as a slice iterator or a pointer.
     /// Safety: validate must have succeded with the same parameters.
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]);
 }

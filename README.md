@@ -47,6 +47,8 @@ test benches::mesh_one::serialize::serde_bitcode          ... bench:         268
 ```
 
 ## TODO
+- [ ] Length > u32::MAX
+- [ ] swap bytes of integers on big endian
 
 ### Types
 - [x] u64, u32, u16...
@@ -58,6 +60,7 @@ test benches::mesh_one::serialize::serde_bitcode          ... bench:         268
 - [ ] [T; N]
 - [ ] Option
 - [ ] Enums
+- [ ] usize/isize
 - [ ] Fallback for opaque types
 
 ### Large Input Optimizations
