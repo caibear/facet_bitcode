@@ -2,13 +2,15 @@ use alloc::vec;
 use alloc::vec::Vec;
 use facet_core::Facet;
 
+/// Serializes a `T:` [`Facet`] into a [`Vec<u8>`].
 pub fn serialize<'facet, T: Facet<'facet> + ?Sized>(t: &T) -> Vec<u8> {
     let mut out = vec![];
     serialize_into(&mut out, t);
     out
 }
 
-fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
+/// Serializes a `T:` [`Facet`] directly into a [`&mut Vec<u8>`](`Vec`).
+pub fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
     let codec = crate::reflect(T::SHAPE);
     unsafe { codec.encode_one(t as *const T as *const u8, out) };
 }
@@ -16,7 +18,7 @@ fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::codec::tests::*;
+    use test::{black_box, Bencher};
 
     #[test]
     fn test_serialize_primitives() {
@@ -160,53 +162,4 @@ mod tests {
         let v = nested_slice();
         b.iter(|| black_box(facet_xdr::to_vec(black_box(&v)).unwrap()))
     }
-
-    macro_rules! bench {
-        ($($b:ident),+) => { $(paste::paste! {
-            #[bench]
-            fn [<bench_serialize_ $b _facet_bitcode>](b: &mut Bencher) {
-                let v = $b();
-                let mut out = vec![];
-                b.iter(|| {
-                    let out = black_box(&mut out);
-                    out.clear();
-                    black_box(serialize_into(out, black_box(&v)))
-                })
-            }
-
-            #[bench]
-            fn [<bench_serialize_ $b _serde_bitcode>](b: &mut Bencher) {
-                let v = $b();
-                b.iter(|| black_box(bitcode::serialize(black_box(&v))))
-            }
-
-            #[bench]
-            fn [<bench_serialize_ $b _derive_bitcode>](b: &mut Bencher) {
-                let v = $b();
-                let mut buffer = bitcode::Buffer::new();
-                b.iter(|| {
-                    black_box(black_box(&mut buffer).encode(black_box(v)));
-                })
-            }
-
-            #[bench]
-            fn [<bench_serialize_ $b _bincode>](b: &mut Bencher) {
-                let v = $b();
-                let mut out = vec![];
-                b.iter(|| {
-                    let out = black_box(&mut out);
-                    out.clear();
-                    black_box(bincode::serialize_into(out, black_box(&v)).unwrap())
-                })
-            }
-
-            #[bench]
-            fn [<bench_serialize_ $b _facet_xdr>](b: &mut Bencher) {
-                let v = $b();
-                b.iter(|| black_box(facet_xdr::to_vec(black_box(&v)).unwrap()))
-            }
-        })+};
-    }
-
-    bench!(mesh_one, mesh_1k);
 }

@@ -20,7 +20,7 @@ type ErrorImpl = &'static str;
 #[cfg(not(debug_assertions))]
 type ErrorImpl = ();
 
-/// Decoding / (De)serialization errors.
+/// A deserialization error.
 /// # Debug mode
 /// In debug mode, the error contains a reason.
 /// # Release mode

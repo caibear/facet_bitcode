@@ -5,6 +5,8 @@ extern crate alloc;
 #[cfg(test)]
 extern crate test;
 
+#[cfg(test)]
+mod benches;
 #[cfg(feature = "std")]
 mod cache;
 mod codec;
@@ -24,7 +26,7 @@ mod strided;
 
 pub use crate::error::Error;
 pub use deserialize::deserialize;
-pub use serialize::serialize;
+pub use serialize::{serialize, serialize_into};
 
 #[cfg(feature = "std")]
 pub(crate) use cache::reflect;

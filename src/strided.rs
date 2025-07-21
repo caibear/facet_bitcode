@@ -149,9 +149,6 @@ impl Encoder for StructCodec {
     }
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
-        // TODO needs strip mining optimization to avoid reading the whole struct
-        // from memory once per field when it doesn't fit in cache.
-        // https://en.wikipedia.org/wiki/Loop_sectioning
         for field in &self.0 {
             field.encode_many(erased, out);
         }
