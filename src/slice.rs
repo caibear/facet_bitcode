@@ -108,8 +108,6 @@ impl<T: BoxedSliceLike> Encoder for BoxedSliceCodec<T> {
     }
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
-        // Using *const [u8] to represent type erased *const [T].
-        #[allow(clippy::cast_slice_different_sizes)]
         let erased = erased as *const [T::ErasedOwned];
 
         let slices = (0..erased.len())
