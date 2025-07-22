@@ -113,6 +113,6 @@ pub fn log_one() -> Log {
     log(1)
 }
 
-pub fn log_1k() -> Log {
-    log(1000)
+pub fn log_10k() -> Log {
+    log(10000)
 }

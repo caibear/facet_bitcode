@@ -2,7 +2,7 @@ use alloc::vec;
 use test::{black_box, Bencher};
 
 mod log;
-use log::{log_1k, log_one, Log};
+use log::{log_10k, log_one, Log};
 mod mesh;
 pub use mesh::Vertex;
 use mesh::{mesh_1k, mesh_one, Mesh};
@@ -124,4 +124,4 @@ macro_rules! bench {
         }
     }
 })+}}
-bench!(mesh_one: Mesh, mesh_1k: Mesh, log_one: Log, log_1k: Log);
+bench!(mesh_one: Mesh, mesh_1k: Mesh, log_one: Log, log_10k: Log);
