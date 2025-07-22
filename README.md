@@ -54,7 +54,7 @@ test benches::mesh_one::serialize::serde_bitcode          ... bench:         268
 - [x] u64, u32, u16...
 - [x] Box<[T]> (hack since no impl facet::Shape for Box<[T]> yet)
 - [x] Structs
-- [ ] Vec<T>
+- [x] Vec<T>
 - [ ] String
 - [ ] str
 - [ ] [T; N]

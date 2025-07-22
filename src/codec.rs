@@ -1,13 +1,13 @@
 use crate::decoder::Decoder;
 use crate::encoder::Encoder;
 use crate::primitive::PrimitiveCodec;
-use crate::slice::BoxedSliceCodec;
+use crate::slice::{BoxedSliceCodec, BoxedSliceMarker, VecMarker};
 use crate::strided::{StridedCodec, StructCodec};
 use alloc::boxed::Box;
 use bytemuck::{CheckedBitPattern, NoUninit};
 use facet_core::{
-    Def, KnownPointer, NumericType, PointerDef, PointerType, PrimitiveType, SequenceType, Shape,
-    SliceType, TextualType, Type, UserType, ValuePointerType,
+    Def, KnownPointer, ListDef, NumericType, PointerDef, PointerType, PrimitiveType, SequenceType,
+    Shape, SliceType, TextualType, Type, UserType, ValuePointerType,
 };
 
 pub trait Codec: Encoder + Decoder {}
@@ -63,6 +63,14 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
         }
         Type::User(UserType::Opaque) => {
             match shape.def {
+                // TODO(safety) more robust Vec<T> detection.
+                Def::List(ListDef { t, .. }) if shape.type_identifier == "Vec" => {
+                    let t = t();
+                    Box::new(BoxedSliceCodec::<VecMarker>::new(
+                        t.layout.sized_layout().unwrap(),
+                        reflect(t),
+                    ))
+                }
                 Def::Pointer(PointerDef {
                     known: Some(KnownPointer::Box),
                     pointee: Some(pointee),
@@ -86,10 +94,12 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
             target,
         })) => match target().ty {
             // TODO unsound for testing, shouldn't be able to decode &[T], only Box<[T]>.
-            Type::Sequence(SequenceType::Slice(SliceType { t })) => Box::new(BoxedSliceCodec::new(
-                t.layout.sized_layout().unwrap(),
-                reflect(t),
-            )),
+            Type::Sequence(SequenceType::Slice(SliceType { t })) => {
+                Box::new(BoxedSliceCodec::<BoxedSliceMarker>::new(
+                    t.layout.sized_layout().unwrap(),
+                    reflect(t),
+                ))
+            }
             _ => todo!("{shape:?}"),
         },
         _ => todo!("{shape:?}"),

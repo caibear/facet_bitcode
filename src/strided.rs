@@ -65,6 +65,7 @@ impl Encoder for StridedCodec {
                     4 => copy_for_size!(4),
                     8 => copy_for_size!(8),
                     16 => copy_for_size!(16),
+                    24 => copy_for_size!(24), // Vec<T>
                     32 => copy_for_size!(32),
                     64 => copy_for_size!(64),
                     _ => copy_for_size!(copy_size),
@@ -123,6 +124,7 @@ impl Decoder for StridedCodec {
                     4 => copy_for_size!(4),
                     8 => copy_for_size!(8),
                     16 => copy_for_size!(16),
+                    24 => copy_for_size!(24), // Vec<T>
                     32 => copy_for_size!(32),
                     64 => copy_for_size!(64),
                     _ => copy_for_size!(copy_size),

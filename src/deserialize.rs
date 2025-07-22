@@ -81,7 +81,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_decode_u32_facet_derive(b: &mut Bencher) {
+    fn bench_decode_u32_facet_bitcode(b: &mut Bencher) {
         let original = 5u32;
         let bytes = crate::serialize(&original);
 
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_decode_vertex_facet_derive(b: &mut Bencher) {
+    fn bench_decode_vertex_facet_bitcode(b: &mut Bencher) {
         let original = Vertex::new(5);
         let bytes = crate::serialize(&original);
 
