@@ -120,11 +120,14 @@ impl<T: BoxedSliceLike> Encoder for BoxedSliceCodec<T> {
             Layout::for_value(&(0 as LengthInt)),
             erased.len(),
             &mut |mut dst| {
+                // Rust doesn't put this value in a register unless we help it like this.
+                let mut n_elements_inner = 0;
                 for slice in slices.clone() {
-                    n_elements += slice.len();
+                    n_elements_inner += slice.len();
                     core::ptr::write_unaligned(dst as *mut LengthInt, slice.len() as LengthInt);
                     dst = dst.byte_add(core::mem::size_of::<LengthInt>());
                 }
+                n_elements = n_elements_inner;
             },
             out,
         );
