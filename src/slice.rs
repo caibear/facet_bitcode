@@ -122,7 +122,7 @@ impl<T: BoxedSliceLike> Encoder for BoxedSliceCodec<T> {
             &mut |mut dst| {
                 for slice in slices.clone() {
                     n_elements += slice.len();
-                    std::ptr::write_unaligned(dst as *mut LengthInt, slice.len() as LengthInt);
+                    core::ptr::write_unaligned(dst as *mut LengthInt, slice.len() as LengthInt);
                     dst = dst.byte_add(core::mem::size_of::<LengthInt>());
                 }
             },
@@ -191,7 +191,7 @@ impl<T: BoxedSliceLike> Decoder for BoxedSliceCodec<T> {
             erased.len(),
             &mut |mut src| {
                 for slice in slices.clone() {
-                    let length = std::ptr::read_unaligned(src as *const LengthInt) as usize;
+                    let length = core::ptr::read_unaligned(src as *const LengthInt) as usize;
                     src = src.byte_add(core::mem::size_of::<LengthInt>());
                     n_elements += length;
                     *slice = T::from_erased_boxed_slice(allocate_erased_box(

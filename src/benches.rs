@@ -108,7 +108,7 @@ macro_rules! bench {
 
         #[bench]
         fn facet_xdr(b: &mut Bencher) {
-            if std::any::type_name::<$t>() != "Mesh" {
+            if core::any::type_name::<$t>() != "Mesh" {
                 return; // Broken on benchmarks that have nested Vec because integers deserialize incorrectly.
             }
 
