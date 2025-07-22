@@ -42,7 +42,7 @@ impl Encoder for StridedCodec {
                 let copy_size = self.layout.size();
 
                 let mut ptr = erased as *const u8;
-                let items = (0..erased.len()).map(|_| {
+                let items = (0..erased.len()).map(move |_| {
                     let p = ptr;
                     unsafe { ptr = ptr.add(stride) };
                     p
@@ -101,7 +101,7 @@ impl Decoder for StridedCodec {
                 let copy_size = self.layout.size();
 
                 let mut ptr = erased as *mut u8;
-                let items = (0..erased.len()).map(|_| {
+                let items = (0..erased.len()).map(move |_| {
                     let p = ptr;
                     unsafe { ptr = ptr.add(stride) };
                     p

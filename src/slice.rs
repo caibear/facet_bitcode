@@ -113,7 +113,7 @@ impl<T: BoxedSliceLike> Encoder for BoxedSliceCodec<T> {
         let erased = erased as *const [T::ErasedOwned];
 
         let slices = (0..erased.len())
-            .map(|i| unsafe { T::as_erased_slice((erased as *const T::ErasedOwned).add(i)) });
+            .map(move |i| unsafe { T::as_erased_slice((erased as *const T::ErasedOwned).add(i)) });
         let mut n_elements = 0;
         try_encode_in_place(
             &self.lengths,
@@ -186,7 +186,8 @@ impl<T: BoxedSliceLike> Decoder for BoxedSliceCodec<T> {
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
         let erased = erased as *mut [T::ErasedOwned];
 
-        let slices = (0..erased.len()).map(|i| unsafe { (erased as *mut T::ErasedOwned).add(i) });
+        let slices =
+            (0..erased.len()).map(move |i| unsafe { (erased as *mut T::ErasedOwned).add(i) });
         let mut n_elements = 0;
         try_decode_in_place(
             &self.lengths,
