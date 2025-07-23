@@ -12,7 +12,7 @@ mod fast {
 
     struct _Dummy;
     thread_local! {
-        static FAST_CACHE: Cell<(TypeId, StaticCodec)> = std::cell::Cell::new((TypeId::of::<_Dummy>(), &DUMMY_CODEC));
+        static FAST_CACHE: Cell<(TypeId, StaticCodec)> = Cell::new((TypeId::of::<_Dummy>(), &DUMMY_CODEC));
     }
 
     // Saves 3ns over shared cache in benchmark with 0 contention.

@@ -2,7 +2,7 @@ use crate::decoder::Decoder;
 use crate::encoder::Encoder;
 use crate::primitive::PrimitiveCodec;
 use crate::slice::{BoxedSliceCodec, BoxedSliceMarker, VecMarker};
-use crate::strided::{StridedCodec, StructCodec};
+use crate::struct_::{StructCodec, StructField};
 use alloc::boxed::Box;
 use bytemuck::{CheckedBitPattern, NoUninit};
 use facet_core::{
@@ -51,15 +51,17 @@ pub fn reflect(shape: &Shape) -> DynamicCodec {
         Type::Primitive(PrimitiveType::Textual(TextualType::Char)) => primitive::<char>(),
         // TODO(safety) packed struct
         Type::User(UserType::Struct(t)) => {
-            Box::new(StructCodec::new(t.fields.iter().map(|field| {
-                // TODO respect field.flags
-                StridedCodec::new(
-                    field.shape.layout.sized_layout().unwrap(),
-                    reflect(field.shape),
-                    shape.layout.sized_layout().unwrap().size(),
-                    field.offset,
-                )
-            })))
+            StructCodec::new_dynamic(
+                t.fields.iter().map(|field| {
+                    // TODO respect field.flags
+                    StructField::new(
+                        reflect(field.shape),
+                        field.offset,
+                        field.shape.layout.sized_layout().unwrap().size(),
+                    )
+                }),
+                shape.layout.sized_layout().unwrap().size(),
+            )
         }
         Type::User(UserType::Opaque) => {
             match shape.def {

@@ -27,6 +27,21 @@ impl<T: NoUninit> Encoder for PrimitiveCodec<T> {
         out.extend_from_slice(erased); // TODO swap_bytes on big endian.
     }
 
+    unsafe fn encode_many_strided(&self, erased: *const [u8], stride: usize, out: &mut Vec<u8>) {
+        let dst_size = erased.len() * core::mem::size_of::<T>();
+        out.reserve(dst_size);
+
+        let mut src = erased as *const u8;
+        let mut dst = out.as_mut_ptr_range().end;
+        for _ in 0..erased.len() {
+            core::ptr::copy_nonoverlapping(src, dst, core::mem::size_of::<T>()); // TODO swap_bytes on big endian.
+            src = src.byte_add(stride);
+            dst = dst.byte_add(core::mem::size_of::<T>());
+        }
+
+        out.set_len(out.len() + dst_size);
+    }
+
     fn in_place(&self) -> bool {
         true // TODO only on little endian
     }
@@ -71,5 +86,17 @@ impl<T: CheckedBitPattern> Decoder for PrimitiveCodec<T> {
         let bytes = consume_byte_arrays_unchecked(input, erased.len(), core::mem::size_of::<T>());
         core::ptr::copy_nonoverlapping(bytes.as_ptr(), erased as *mut u8, bytes.len());
         // TODO swap_bytes on big endian.
+    }
+
+    unsafe fn decode_many_strided(&self, input: &mut &[u8], erased: *mut [u8], stride: usize) {
+        let bytes = consume_byte_arrays_unchecked(input, erased.len(), core::mem::size_of::<T>());
+
+        let mut src = bytes.as_ptr();
+        let mut dst = erased as *mut u8;
+        for _ in 0..erased.len() {
+            core::ptr::copy_nonoverlapping(src, dst, core::mem::size_of::<T>()); // TODO swap_bytes on big endian.
+            src = src.byte_add(core::mem::size_of::<T>());
+            dst = dst.byte_add(stride);
+        }
     }
 }

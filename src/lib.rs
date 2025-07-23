@@ -22,7 +22,7 @@ mod primitive;
 mod raw_vec_fork;
 mod serialize;
 mod slice;
-mod strided;
+mod struct_;
 
 pub use crate::error::Error;
 pub use deserialize::deserialize;

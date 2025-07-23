@@ -52,7 +52,7 @@ test benches::mesh_one::serialize::serde_bitcode          ... bench:         268
 
 ### Types
 - [x] u64, u32, u16...
-- [x] Box<[T]> (hack since no impl facet::Shape for Box<[T]> yet)
+- [x] Box<[T]> (hack since no impl facet::Facet for Box<[T]> yet)
 - [x] Structs
 - [x] Vec<T>
 - [ ] String
@@ -65,14 +65,13 @@ test benches::mesh_one::serialize::serde_bitcode          ... bench:         268
 
 ### Large Input Optimizations
 - [ ] AOT optimizer
-    - [ ] flatten StructCodecs
-    - [ ] reform new StructCodecs when element_size/stride is too large
+    - [x] flatten StructCodecs
 - [ ] scratch allocator
 - [ ] rayon (unlike most serializers everything is trivially parallelizable)
     - [ ] par_iter on byte copying loops
     - [ ] par_iter on struct field loop
 - [ ] JIT optimizer
-    - [ ] ??? Profit
+    - [ ] small copies with large stride can bottleneck on memory bandwidth (e.g. struct with 64 1 byte fields)
 
 ### Small Input Optimizations
 - [ ] function ptrs instead of &dyn Codec

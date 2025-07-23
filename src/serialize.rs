@@ -18,6 +18,7 @@ pub fn serialize_into<'facet, T: Facet<'facet> + ?Sized>(out: &mut Vec<u8>, t: &
 #[cfg(test)]
 mod tests {
     use super::*;
+    use facet::Facet;
     use test::{black_box, Bencher};
 
     #[test]
@@ -77,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_serialize_struct() {
-        #[derive(facet::Facet)]
+        #[derive(Facet)]
         struct Foo(u32, u8, bool);
 
         let out = serialize(&Foo(3, 2, true));

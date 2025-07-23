@@ -24,7 +24,9 @@ pub fn deserialize<'facet, T: Facet<'facet>>(bytes: &[u8]) -> Result<T, Error> {
 mod tests {
     use super::*;
     use crate::benches::Vertex;
+    use alloc::vec;
     use core::fmt::Debug;
+    use facet::Facet;
     use test::{black_box, Bencher};
 
     fn roundtrip<'facet, T: Facet<'facet> + Debug + PartialEq>(t: &T) {
@@ -78,6 +80,14 @@ mod tests {
     #[test]
     fn test_struct() {
         roundtrip(&Vertex::new(42));
+        roundtrip(&(42,));
+        roundtrip(&((42,),));
+        roundtrip(&(1, (2, 3)));
+
+        #[derive(Debug, PartialEq, Facet)]
+        #[repr(align(8))]
+        struct FakeTransparent(u32);
+        roundtrip(&vec![FakeTransparent(1), FakeTransparent(2)]);
     }
 
     #[bench]

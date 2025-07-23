@@ -108,10 +108,20 @@ impl<T: BoxedSliceLike> Encoder for BoxedSliceCodec<T> {
     }
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>) {
+        self.encode_many_strided(erased, core::mem::size_of::<T::ErasedOwned>(), out);
+    }
+
+    #[inline(never)]
+    unsafe fn encode_many_strided(&self, erased: *const [u8], stride: usize, out: &mut Vec<u8>) {
         let erased = erased as *const [T::ErasedOwned];
 
-        let slices = (0..erased.len())
-            .map(move |i| unsafe { T::as_erased_slice((erased as *const T::ErasedOwned).add(i)) });
+        let mut slices_ptr = erased as *const T::ErasedOwned;
+        let slices = (0..erased.len()).map(move |_| {
+            let p = slices_ptr;
+            unsafe { slices_ptr = slices_ptr.byte_add(stride) };
+            T::as_erased_slice(p)
+        });
+
         let mut n_elements = 0;
         try_encode_in_place(
             &self.lengths,
@@ -182,10 +192,20 @@ impl<T: BoxedSliceLike> Decoder for BoxedSliceCodec<T> {
     }
 
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]) {
+        self.decode_many_strided(input, erased, core::mem::size_of::<T::ErasedOwned>());
+    }
+
+    #[inline(never)]
+    unsafe fn decode_many_strided(&self, input: &mut &[u8], erased: *mut [u8], stride: usize) {
         let erased = erased as *mut [T::ErasedOwned];
 
-        let slices =
-            (0..erased.len()).map(move |i| unsafe { (erased as *mut T::ErasedOwned).add(i) });
+        let mut slices_ptr = erased as *mut T::ErasedOwned;
+        let slices = (0..erased.len()).map(move |_| {
+            let p = slices_ptr;
+            unsafe { slices_ptr = slices_ptr.byte_add(stride) };
+            p
+        });
+
         let mut n_elements = 0;
         try_decode_in_place(
             &self.lengths,

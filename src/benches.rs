@@ -2,10 +2,12 @@ use alloc::vec;
 use test::{black_box, Bencher};
 
 mod log;
-use log::{log_10k, log_one, Log};
+use log::{log_1k, log_one, Log};
 mod mesh;
 pub use mesh::Vertex;
 use mesh::{mesh_1k, mesh_one, Mesh};
+mod nested;
+use nested::{struct_tree, T0};
 
 macro_rules! bench {
     ($($b:ident: $t:ty),+) => { $(mod $b { use super::*;
@@ -74,7 +76,7 @@ macro_rules! bench {
 
             b.iter(|| {
                 let deserialized: $t = bitcode::deserialize(black_box(bytes.as_slice())).unwrap();
-                debug_assert_eq!(&*deserialized, &*original);
+                debug_assert_eq!(deserialized, original);
                 deserialized
             })
         }
@@ -88,7 +90,7 @@ macro_rules! bench {
 
             b.iter(|| {
                 let deserialized: $t = buffer.decode(black_box(bytes.as_slice())).unwrap();
-                debug_assert_eq!(&*deserialized, &*original);
+                debug_assert_eq!(deserialized, original);
                 deserialized
             })
         }
@@ -101,7 +103,7 @@ macro_rules! bench {
 
             b.iter(|| {
                 let deserialized: $t = bincode::deserialize(black_box(bytes.as_slice())).unwrap();
-                debug_assert_eq!(&*deserialized, &*original);
+                debug_assert_eq!(deserialized, original);
                 deserialized
             })
         }
@@ -118,10 +120,10 @@ macro_rules! bench {
             b.iter(|| {
                 let deserialized: $t = facet_xdr::deserialize(black_box(bytes.as_slice())).unwrap();
                 // xdr current serializes u8 as u64 and deserializes it as u32, but perf should be similar.
-                // debug_assert_eq!(&*deserialized, &*original);
+                // debug_assert_eq!(deserialized, original);
                 deserialized
             })
         }
     }
 })+}}
-bench!(mesh_one: Mesh, mesh_1k: Mesh, log_one: Log, log_10k: Log);
+bench!(mesh_one: Mesh, mesh_1k: Mesh, log_one: Log, log_1k: Log, struct_tree: T0);

@@ -106,13 +106,16 @@ impl Distribution<LogEntry> for StandardUniform {
 pub type Log = Vec<LogEntry>;
 
 pub fn log(n: usize) -> Log {
-    rand::rng().random_iter().take(n).collect()
+    rand_chacha::ChaCha20Rng::from_seed(Default::default())
+        .random_iter()
+        .take(n)
+        .collect()
 }
 
 pub fn log_one() -> Log {
     log(1)
 }
 
-pub fn log_10k() -> Log {
-    log(10000)
+pub fn log_1k() -> Log {
+    log(1000)
 }

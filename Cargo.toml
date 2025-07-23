@@ -13,7 +13,8 @@ bitcode = { version = "0.6.6", features = [ "serde" ]}
 facet = "0.27.16"
 facet-xdr = "0.1.19"
 serde = { version = "1", features = [ "derive" ]}
-rand = { version = "0.9", default-features = false, features = [ "thread_rng" ] }
+rand = { version = "0.9", default-features = false }
+rand_chacha = "0.9"
 
 [features]
 std = []

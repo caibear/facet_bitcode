@@ -19,6 +19,8 @@ pub trait Decoder: Send + Sync {
 
     /// Safety: validate must have succeded with the same parameters.
     unsafe fn decode_many(&self, input: &mut &[u8], erased: *mut [u8]);
+
+    unsafe fn decode_many_strided(&self, input: &mut &[u8], erased: *mut [u8], stride: usize);
 }
 
 #[inline(always)]

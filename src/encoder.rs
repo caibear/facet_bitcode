@@ -1,4 +1,5 @@
 use crate::codec::Codec;
+use crate::struct_::StructCodec;
 use alloc::vec::Vec;
 use core::alloc::Layout;
 
@@ -9,9 +10,15 @@ pub trait Encoder: Send + Sync {
 
     unsafe fn encode_many(&self, erased: *const [u8], out: &mut Vec<u8>);
 
+    unsafe fn encode_many_strided(&self, erased: *const [u8], stride: usize, out: &mut Vec<u8>);
+
     // TODO used by try_decode_in_place, move to Codec?
     fn in_place(&self) -> bool {
         false
+    }
+
+    fn as_struct_codec_mut(&mut self) -> Option<&mut StructCodec> {
+        None
     }
 }
 
