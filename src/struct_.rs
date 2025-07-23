@@ -70,11 +70,8 @@ impl Encoder for StructCodec {
         }
     }
 
-    unsafe fn encode_many_strided(&self, erased: *const [u8], stride: usize, out: &mut Vec<u8>) {
-        for field in &self.fields {
-            let erased = erased.byte_add(field.offset);
-            field.codec.encode_many_strided(erased, stride, out);
-        }
+    unsafe fn encode_many_strided(&self, _: *const [u8], _: usize, _: &mut Vec<u8>) {
+        unreachable!(); // Struct codecs are flattened.
     }
 
     fn as_struct_codec_mut(&mut self) -> Option<&mut StructCodec> {
@@ -104,10 +101,7 @@ impl Decoder for StructCodec {
         }
     }
 
-    unsafe fn decode_many_strided(&self, input: &mut &[u8], erased: *mut [u8], stride: usize) {
-        for field in &self.fields {
-            let erased = erased.byte_add(field.offset);
-            field.codec.decode_many_strided(input, erased, stride);
-        }
+    unsafe fn decode_many_strided(&self, _: &mut &[u8], _: *mut [u8], _: usize) {
+        unreachable!(); // Struct codecs are flattened.
     }
 }
